@@ -7,6 +7,9 @@
 
 
 #include <ctime>
+#include <string>
+
+using namespace std;
 
 /// subs from tm 1900 years and makes mon in range [0-11]
 int tm_SubDefault(tm &time);
@@ -23,5 +26,10 @@ double to_MJD(tm &time);
 double to_starTime(double sunSeconds);
 
 double to_SunTime(double starSeconds);
+
+
+string myToString(int value, int countSymbols = 2);
+
+string getCurrentDateTimeStr();
 
 #endif //PRAO_COMPRESSER_TIME_H

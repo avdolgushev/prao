@@ -44,3 +44,19 @@ double to_starTime(double sunSeconds) {
 double to_SunTime(double starSeconds) {
     return starSeconds / 1.0027379093507936701425169545368;
 }
+
+string myToString(int value, int countSymbols){
+    string res = to_string(value);
+    while (res.size() < countSymbols)
+        res = '0' + res;
+
+    return res;
+}
+
+string getCurrentDateTimeStr() {
+    time_t t = time(0);
+    tm* now = localtime(&t);
+
+    return myToString(now->tm_year + 1900) + '-' + myToString(now->tm_mon + 1) + '-' + myToString(now->tm_mday) + ' ' +
+        myToString(now->tm_hour) + '.' + myToString(now->tm_min) + '.' + myToString(now->tm_sec);
+}

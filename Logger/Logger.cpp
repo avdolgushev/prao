@@ -1,0 +1,59 @@
+//
+// Created by work on 06.05.2019.
+//
+
+#include "Logger.h"
+
+void Logger::writer(){
+    while (!logger_stopperd && !storage.empty()){
+        {
+            lock_guard<mutex> locker(storage_mutex);
+            ofstream file(_filename, fstream::out | fstream::app);
+            for (string &s: storage)
+                file << s << endl;
+            file.close();
+            storage.clear();
+        }
+        this_thread::sleep_for(chrono::milliseconds(100));
+    }
+}
+
+
+Logger::Logger() {
+    _mkdir(default_logging_directory.c_str());
+    _filename = default_logging_directory + '/' + getCurrentDateTimeStr() + ".log";
+}
+
+Logger::~Logger() {
+    stop_logging();
+    if (writer_thread != nullptr)
+        delete(writer_thread);
+}
+
+void Logger::LOG(string log_string, string file, string func, int line){
+
+    string code_debug_info = "\t(file: " + file + "\tfunction: " + func + "\tline: " + to_string(line) + ")";
+    if (true)
+        log_string = getCurrentDateTimeStr() + code_debug_info + ": " + log_string;
+    else
+        log_string = getCurrentDateTimeStr() + ": " + log_string;
+
+    {
+        lock_guard<mutex> locker(storage_mutex);
+        storage.push_back(log_string);
+    }
+
+    if (writer_thread == nullptr)
+        writer_thread = new thread([this] { writer(); });
+}
+
+void Logger::stop_logging(){
+    logger_stopperd = true;
+    if (writer_thread != nullptr)
+        writer_thread->join();
+}
+
+Logger Logger_obj;
+void LOG(string log_string, string file, string func, int line) {
+    Logger_obj.LOG(move(log_string), move(file), move(func), line);
+}
