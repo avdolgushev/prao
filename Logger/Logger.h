@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <direct.h>
+#include <cstdarg>
 #include <thread>
 #include <mutex>
 #include <fstream>
@@ -15,7 +16,7 @@
 #include "../Time/Time.h"
 
 
-#define LOGGER(str) LOG(str, __FILE__, __FUNCTION__, __LINE__)
+#define LOGGER(...) LOG(__FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 using namespace std;
 
@@ -42,6 +43,6 @@ public:
 
 extern Logger Logger_obj;
 
-void LOG(string log_string, string file, string func, int line);
+void LOG(string file, string func, int line, ...);
 
 #endif //PRAO_COMPRESSER_LOGGER_H

@@ -5,7 +5,7 @@
 #include "Logger.h"
 
 void Logger::writer(){
-    while (!logger_stopperd && !storage.empty()){
+    while (!logger_stopperd || !storage.empty()){
         {
             lock_guard<mutex> locker(storage_mutex);
             ofstream file(_filename, fstream::out | fstream::app);
@@ -54,6 +54,13 @@ void Logger::stop_logging(){
 }
 
 Logger Logger_obj;
-void LOG(string log_string, string file, string func, int line) {
-    Logger_obj.LOG(move(log_string), move(file), move(func), line);
+void LOG(string file, string func, int line, ...) {
+    char buffer[0x1000];
+
+    va_list args;
+    va_start (args, line);
+    string format = va_arg(args, char*);
+    vsnprintf(buffer, 0x1000, format.c_str(), args);
+    va_end (args);
+    Logger_obj.LOG(buffer, move(file), move(func), line);
 }
