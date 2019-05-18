@@ -10,7 +10,16 @@ DataReader* FilesListItem::getDataReader(double starSeconds_timeChunk_dur){
     return reader;
 }
 
+FilesListItem::~FilesListItem(){
+    if (reader != nullptr) {
+        delete reader;
+        reader = nullptr;
+    }
+}
+
 istream &operator>>(istream & in, FilesListItem& dt){
+    LOGGER(">> Read file description from files list");
+
     string tmp;
     getline(in, tmp, ';');
     sscanf(tmp.c_str(), "%d-%d-%d %d:%d:%d", &dt.time_UTC.tm_year, &dt.time_UTC.tm_mon, &dt.time_UTC.tm_mday, &dt.time_UTC.tm_hour, &dt.time_UTC.tm_min, &dt.time_UTC.tm_sec);
@@ -38,5 +47,6 @@ istream &operator>>(istream & in, FilesListItem& dt){
     getline(in, tmp, '\n');
     dt.time_JD = atof(tmp.c_str());
 
+    LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_JD);
     return in;
 }

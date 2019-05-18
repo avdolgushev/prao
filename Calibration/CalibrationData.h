@@ -7,6 +7,8 @@
 
 #include "CalibrationDataInput.h"
 
+#include "../Logger/Logger.h"
+
 #include <iostream>
 
 using namespace std;

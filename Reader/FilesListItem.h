@@ -12,6 +12,8 @@
 #include "../Time/Time.h"
 #include "DataReader.h"
 
+#include "../Logger/Logger.h"
+
 using namespace std;
 
 struct FilesListItem{
@@ -23,6 +25,7 @@ struct FilesListItem{
     DataReader *reader = nullptr;
 
     DataReader* getDataReader(double starSeconds_timeChunk_dur);
+    ~FilesListItem();
 
     friend istream &operator>>(istream & in, FilesListItem& dt);
 };

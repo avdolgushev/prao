@@ -5,30 +5,41 @@
 #include "DataReader.h"
 
 DataReader::DataReader(string path, double starSeconds_timeChunk_dur) {
+    LOGGER(">> Create reader of raw data (star time of chunk: %f\tfile: %s)", starSeconds_timeChunk_dur, path.c_str());
     in = ifstream(path, ios::binary | ios::in);
-    if (!in.good())
+    if (!in.good()) {
+        LOGGER(">> ERROR. %s file not found", path.c_str());
         throw logic_error(path + " file not found");
+    }
     readHeader();
 
     timeChunk_duration_star = starSeconds_timeChunk_dur;
     timeChunk_duration_sun = to_SunTime(starSeconds_timeChunk_dur);
     points_per_chunk = float(timeChunk_duration_sun / dataHeader.tresolution);
+    LOGGER("<< Created reader of raw data (floats per chunk: %f)", points_per_chunk);
 }
 
 DataReader::~DataReader() {
-    if (buffer != nullptr)
+    if (buffer != nullptr) {
         delete(buffer);
+        buffer = nullptr;
+    }
     if (buffer_second != nullptr){
         delete(buffer_second);
+        buffer_second = nullptr;
         reading_thread->join();
         delete reading_thread;
+        reading_thread = nullptr;
     }
     in.close();
+    LOGGER("<< Raw data reader was destroyed. Total time: reading - %f, calibrating - %f, copying - %f", time_reading / (float) CLOCKS_PER_SEC,
+            time_calibrating / (float) CLOCKS_PER_SEC, time_copying / (float) CLOCKS_PER_SEC);
 }
 
 
 
 void DataReader::setCalibrationData(CalibrationDataStorage *calibrationData){
+    LOGGER(">> Calibration data storage was attached to raw data reader");
     calibration = calibrationData;
     updateCalibrationData();
 }
@@ -51,7 +62,6 @@ void DataReader::readNextPointsInternal(float *point, int full_count, int offset
         readHeader();
     if (!reading_started)
         prepareReading();
-    reading_started = true;
 
     if (count_read_points + local_count > dataHeader.npoints) // may be disabled for perf purposes
         throw logic_error("count of points is exceed");
@@ -96,14 +106,19 @@ void DataReader::readNextPointsInternal(float *point, int full_count, int offset
 
 void DataReader::readHeader(){
     if (!is_header_parsed){
+        LOGGER(">> Read raw data header");
         in >> dataHeader;
         is_header_parsed = true;
         floats_per_point = (dataHeader.nbands + 1) * 48;
         size_per_point = floats_per_point * sizeof(float);
+        LOGGER("<< Raw data header was read (floats per point: %d)", floats_per_point);
     }
 }
 
-void DataReader::prepareReading(){
+void DataReader::prepareReading() {
+    LOGGER(">> First reading of the raw data. BUFFER size is %f MB", BUFFER_SIZE / 1024.0 / 1024.0);
+
+    reading_started = true;
     buffer = new char[BUFFER_SIZE];
     int start = clock();
     in.read(buffer, BUFFER_SIZE); // initial read of first data chunk
@@ -112,11 +127,15 @@ void DataReader::prepareReading(){
     if (!in.eof()) { // TODO: think about EOF
         buffer_second = new char[BUFFER_SIZE];
         reading_thread = new thread( [this] { readingThread(); } );
-    }
+        LOGGER("<< First reading of the raw data. Additional thread was created.");
+    } else
+        LOGGER("<< First reading of the raw data. Additional thread wasn't created.");
 }
 
 
-void DataReader::readingThread(){
+void DataReader::readingThread() {
+    LOGGER(">> Reading thread start.");
+
     int start = clock();
     in.read(buffer_second, BUFFER_SIZE); // reading of next data
     time_reading += clock() - start;
@@ -124,6 +143,8 @@ void DataReader::readingThread(){
     while (true){
         while (!swap_ready)
             this_thread::yield();
+
+        LOGGER(">> Reading thread: swap reading and processing buffers.");
 
         swap(buffer, buffer_second);
         buffer_pointer = 0;
@@ -134,8 +155,9 @@ void DataReader::readingThread(){
         in.read(buffer_second, BUFFER_SIZE); // reading of next data
         time_reading += clock() - start;
         //this_thread::sleep_for(chrono::milliseconds(250));
-
     }
+
+    LOGGER("<< Reading thread exit.");
 }
 
 
@@ -151,6 +173,8 @@ void DataReader::updateCalibrationData(){
     CalibrationData * left = calibration->getCalibrationData_left_by_time(currentPointMJD);
     CalibrationData * right = calibration->getCalibrationData_right_by_time(currentPointMJD);
 
+    LOGGER(">> Raw data reader: switch actual calibration file (current MJD: %f, left MJD: %f, right MJD: %f)", currentPointMJD, left->get_MJD(), right->get_MJD());
+
     points_before_switch_calibration = ((right->get_MJD() - currentPointMJD) * 24 * 60 * 60 + dataHeader.tresolution - 0.000000001) / dataHeader.tresolution;
 
     realloc(calibration_on_k, left->get_one_kelvin());
@@ -164,11 +188,17 @@ void DataReader::updateCalibrationData(){
         on_k_step[i] = (on_k_step[i] - calibration_on_k[i]) / n;
         zr_step[i] = (zr_step[i] - calibration_zr[i]) / n;
     }
+
+
+    LOGGER(">> Switched actual calibration file (points before next switching: %d)", points_before_switch_calibration);
 }
 
 
 void DataReader::calibrateArrayPoints(float *point, int count) {
     static const int calibrationChunkSize = 100;
+
+    LOGGER(">> Calibration of %d points was started. Calibration points step is %d points", count, calibrationChunkSize);
+
     for (int t = 0; t < count / calibrationChunkSize; ++t)
         calibrateArrayPointsDetailed(&point[t * calibrationChunkSize * floats_per_point], calibrationChunkSize);
 
@@ -176,6 +206,7 @@ void DataReader::calibrateArrayPoints(float *point, int count) {
         calibrateArrayPointsDetailed(&point[(count - count % calibrationChunkSize) * floats_per_point],
                                      count % calibrationChunkSize);
 
+    LOGGER("<< Calibration of %d points was finished", count);
     /*
     for (int i = 0; i < count; ++i) {
         for (int j = 0; j < floats_per_point; ++j) {

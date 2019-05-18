@@ -39,10 +39,16 @@ int CalibrationDataStorage::add_items(string &data) {
 
 
 int CalibrationDataStorage::add_items_from_file(string &path) {
+    LOGGER(">> Add to calibration signals storage signals from file (path: %s)", path.c_str());
+
     ifstream stream(path, ios::binary);
-    if (!stream.good())
+    if (!stream.good()) {
+        LOGGER("%s %s", path.c_str(), "file not exists");
         throw logic_error(path + " file not exists");
-    return add_items_from_stream(stream);
+    }
+    int count = add_items_from_stream(stream);
+    LOGGER("<< Added %d calibration signals to calibration signals storage", count);
+    return count;
 }
 
 CalibrationData* CalibrationDataStorage::getCalibrationData_left_by_UTC(int year, int mon, int day, int hour, int min, int sec) {

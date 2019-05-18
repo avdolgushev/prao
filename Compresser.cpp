@@ -65,14 +65,15 @@ void Compresser::run() {
 }
 
 CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_calibration) {
+    LOGGER(">> Creating storage of calibration signals from file %s", path_calibration.c_str());
     float start = 0, diff = 0;
     auto *storage = new CalibrationDataStorage();
 
     start = clock();
-    std::string path(std::move(path_calibration));
-    storage->add_items_from_file(path);
+    storage->add_items_from_file(path_calibration);
     diff = (clock() - start) / CLOCKS_PER_SEC;
     cout << "reading calibration file took " << diff << " sec" << endl;
+    LOGGER("<< Created storage of calibration signals from file %s took %f seconds", path_calibration.c_str(), diff);
     return storage;
 }
 

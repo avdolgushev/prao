@@ -9,6 +9,8 @@
 #include <set>
 #include <fstream>
 
+#include "../Logger/Logger.h"
+
 /// stores all known calibrations and extracts appropriate by datetime
 class CalibrationDataStorage{
 private:

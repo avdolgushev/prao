@@ -9,6 +9,8 @@
 #include "../Point/Point.h"
 #include "../Calibration/CalibrationDataStorage.h"
 
+#include "../Logger/Logger.h"
+
 #include <cstring>
 #include <cmath>
 #include <thread>

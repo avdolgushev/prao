@@ -13,6 +13,8 @@
 
 #include "../Time/Time.h"
 
+#include "../Logger/Logger.h"
+
 using namespace std;
 
 /// to parse calibration data for 1 stand

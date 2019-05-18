@@ -17,6 +17,7 @@
 #include "Reader/FilesListItem.h"
 #include "Config/Config.h"
 
+#include "Logger/Logger.h"
 
 class Compresser {
 private:
