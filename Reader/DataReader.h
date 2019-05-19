@@ -35,7 +35,8 @@ class DataReader{
     thread *reading_thread = nullptr;
 
     double timeChunk_duration_star = 0, timeChunk_duration_sun = 0; // seconds of chunk to be read in star time and in sun time
-
+    double curr_file_starTime_start = 0, curr_file_time_duration_hours = 0;
+    double ideal_points = 0;
 
     void readHeader();
     void prepareReading();
@@ -47,6 +48,7 @@ class DataReader{
     void calibrateArrayPoints(float *point, int count);
     void calibrateArrayPointsDetailed(float *point, int size);
 
+    void point_seek(double point);
     /// \breif read points recursive implementation
     /// \param point destination
     /// \param full_count count of points to read
@@ -60,8 +62,10 @@ public:
 
     /// \param filepath path to file from which read
     /// \param starSeconds_timeChunk_dur duration in star seconds of how many points will be read by call to readNextPoints
-    explicit DataReader(string filepath, double starSeconds_timeChunk_dur);
+    explicit DataReader(string filepath, double starSeconds_timeChunk_dur, double star_time_start, double MJD_duration);
     ~DataReader();
+
+    void seekStarHour(double starHour);
 
     /// \breif set calibration signals
     void setCalibrationData(CalibrationDataStorage *calibrationData);

@@ -4,7 +4,7 @@
 
 #include "DataReader.h"
 
-DataReader::DataReader(string path, double starSeconds_timeChunk_dur) {
+DataReader::DataReader(string path, double starSeconds_timeChunk_dur, double star_time_start, double MJD_duration) {
     LOGGER(">> Create reader of raw data (star time of chunk: %f\tfile: %s)", starSeconds_timeChunk_dur, path.c_str());
     in = ifstream(path, ios::binary | ios::in);
     if (!in.good()) {
@@ -12,6 +12,11 @@ DataReader::DataReader(string path, double starSeconds_timeChunk_dur) {
         throw logic_error(path + " file not found");
     }
     readHeader();
+    curr_file_starTime_start = star_time_start;
+    curr_file_time_duration_hours = MJD_duration * 24;
+    ideal_points = curr_file_time_duration_hours * 60 * 60 / dataHeader.tresolution;
+
+
 
     timeChunk_duration_star = starSeconds_timeChunk_dur;
     timeChunk_duration_sun = to_SunTime(starSeconds_timeChunk_dur);
@@ -37,6 +42,14 @@ DataReader::~DataReader() {
 }
 
 
+void DataReader::seekStarHour(double starHour){
+    double t = to_starTime(curr_file_time_duration_hours);
+    double points_ideal_star_hour = ideal_points / t;
+    double proportion = starHour - curr_file_starTime_start;
+    if (proportion < 0)
+        proportion += 24;
+    point_seek(proportion * points_ideal_star_hour);
+}
 
 void DataReader::setCalibrationData(CalibrationDataStorage *calibrationData){
     LOGGER(">> Calibration data storage was attached to raw data reader");
@@ -55,6 +68,13 @@ int DataReader::readNextPoints(float *point) {
 
 void DataReader::readNextPoints(float *point, int count) {
     readNextPointsInternal(point, count, 0, count);
+}
+
+void DataReader::point_seek(double point){
+    int point_to_seek_int = int(point + 0.5);
+    remainder = float(point_to_seek_int - point);
+
+
 }
 
 void DataReader::readNextPointsInternal(float *point, int full_count, int offset, int local_count){

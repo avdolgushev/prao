@@ -5,8 +5,12 @@
 #include "FilesListItem.h"
 
 DataReader* FilesListItem::getDataReader(double starSeconds_timeChunk_dur){
-    if (reader == nullptr)
-        reader = new DataReader(filepath, starSeconds_timeChunk_dur);
+    if (reader == nullptr) {
+        if (nextItemInfo != nullptr)
+            MJD_difference = nextItemInfo->time_JD - time_JD;
+
+        reader = new DataReader(filepath, starSeconds_timeChunk_dur, star_time_start, MJD_difference);
+    }
     return reader;
 }
 
@@ -15,6 +19,18 @@ FilesListItem::~FilesListItem(){
         delete reader;
         reader = nullptr;
     }
+}
+
+bool FilesListItem::good() {
+    return nbands != 0;
+}
+
+void FilesListItem::SetNextFileInfo(FilesListItem * next) {
+    if (nextItemInfo != nullptr) {
+        throw logic_error("nextItemInfo has been already set");
+    }
+    else
+        nextItemInfo = next;
 }
 
 istream &operator>>(istream & in, FilesListItem& dt){
