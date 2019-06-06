@@ -59,9 +59,10 @@ void Compresser::run() {
 
         container.flush();
 
-        delete reader;
+
         reader = readerNext;
         item = item_next;
+        item_next = new FilesListItem();
     }
 }
 
