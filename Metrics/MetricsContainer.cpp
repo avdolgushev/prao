@@ -56,18 +56,19 @@ storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListIte
     return &storage[storage.size() - 1];
 }
 
-#define EPS 1e-9
-
 
 void MetricsContainer::flush() {
 
     storageEntry * found = nullptr;
     vector<metrics *> found_metrics;
+    double time_last_found_metric;
 
     vector<pair<vector<pair<double, metrics *> >*, vector<pair<double, metrics *> >::iterator> > iterators_to_erase;
 
     for (auto it = storage.begin(); it != storage.end(); ++it) {
         storageEntry &curr_storageEntry = *it;
+
+        double starSeconds = curr_storageEntry.filesListItem->getDataReader()->get_starSeconds_timeChunk_dur();
 
         if (curr_storageEntry.storage.empty())
             continue;
@@ -80,8 +81,16 @@ void MetricsContainer::flush() {
 
             double tmp;
 
-            if (found != nullptr && modf(time / 3600, &tmp) > EPS) // 2. adding metrics
+            if (found != nullptr && modf(time / 3600, &tmp) > EPS) { // 2. adding metrics
+                double diff = it2->first - time_last_found_metric;
+                if (diff < 0)
+                    diff += 86400;
+                if (abs(diff - starSeconds) > EPS)
+                    throw logic_error("a gap is more than starSeconds from config");
+
                 found_metrics.push_back(it2->second);
+                time_last_found_metric = it2->first;
+            }
             else if (found != nullptr && modf(time / 3600, &tmp) < EPS) { // 3. found end
                 saveFound(found, found_metrics);
                 found_metrics.clear();
@@ -101,6 +110,7 @@ void MetricsContainer::flush() {
             }
             if (found == nullptr && modf(time / 3600, &tmp) < EPS) { // 1. found start
                 found = it.base();
+                time_last_found_metric = it2->first;
                 found_metrics.push_back(it2->second);
                 iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, it2));
             }

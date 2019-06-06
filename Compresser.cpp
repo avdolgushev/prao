@@ -34,6 +34,7 @@ void Compresser::run() {
             readerNext = nullptr;
 
 
+        int start, time_processing_curr = 0;
         if (remains){
             count = offset + reader->readNextPoints(data_reordered_buffer, remains, offset);
             MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
@@ -47,11 +48,14 @@ void Compresser::run() {
             curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
             count = reader->readNextPoints(data_reordered_buffer);
             MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
+            start = clock();
             metrics_storage->addNewMetrics(curr_starTime_seconds, calculator.calc());
+            time_processing_curr += clock() - start;
         }
 
         curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
         offset = reader->readRemainder(data_reordered_buffer, &remains);
+        cout << "processing time: " << time_processing_curr / (float) CLOCKS_PER_SEC << endl;
 
         container.flush();
 

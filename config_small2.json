@@ -1,0 +1,10 @@
+{
+  "localWorkSize": 2,
+  "fileListPath": "../resources/small2/filesListSmall.txt",
+  "calibrationListPath": "../resources/small2/smallCalibrationParts.txt",
+  "starSeconds": 10.0,
+  "leftPercentile": 0.02,
+  "rightPercentile": 0.7,
+  "outputPath": "output",
+  "algorithm": 1
+}

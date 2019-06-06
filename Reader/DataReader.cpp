@@ -150,6 +150,12 @@ int DataReader::readNextPointsInternal(float *point, int full_count, int offset,
             while (swap_ready)
                 this_thread::yield();
         }
+//        else {
+//            int start = clock();
+//            in.read(buffer, BUFFER_SIZE);
+//            buffer_pointer = 0;
+//            time_reading += clock() - start;
+//        }
 
         out_count += readNextPointsInternal(point, full_count, offset + points_available, local_count - points_available);
     } else {

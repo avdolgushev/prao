@@ -14,6 +14,8 @@
 #include "../Reader/DataReader.h"
 #include "../Reader/FilesListItem.h"
 
+#define EPS 1e-9
+
 struct storageEntry{
     FilesListItem * filesListItem = nullptr;
     vector<pair<double, metrics *> > storage = vector<pair<double, metrics *> >();

@@ -81,6 +81,9 @@ public:
     /// \breif set calibration signals
     void setCalibrationData(CalibrationDataStorage *calibrationData);
 
+    inline double get_starSeconds_timeChunk_dur(){
+        return timeChunk_duration_star;
+    }
     /// \breif get size of array that should be passed to read points for the specified in ctor time
     inline int getNeedBufferSize(){
         return floats_per_point * int(timeChunk_duration_sun / dataHeader.tresolution + 1);
