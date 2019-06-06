@@ -21,8 +21,8 @@ using namespace std;
 struct CalibrationDataInput{
     tm datetime = {};
     //time_t time_internal;
-    double MJD;
-    int signal_type, temperature, is_data_good;
+    double MJD, temperature;
+    int signal_type, is_data_good;
     vector<float> data;
 
     /// input - is a string read from file and that contains data related to 1 calibration array of signals with header
