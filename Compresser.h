@@ -10,6 +10,8 @@
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <utility>
+
 
 #include "Processing/OpenCLContext.h"
 #include "Processing/MetricsCalculator.h"
@@ -51,7 +53,6 @@ public:
      * По всем файлам из fileListPath
      */
     void run();
-    void run2();
 
     /**
      * Служебный метод

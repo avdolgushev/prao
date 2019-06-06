@@ -20,6 +20,9 @@ DataReader::DataReader(string path, double starSeconds_timeChunk_dur, double sta
     timeChunk_duration_star = starSeconds_timeChunk_dur;
     timeChunk_duration_sun = to_SunTime(starSeconds_timeChunk_dur);
     //points_per_chunk = float(timeChunk_duration_sun / dataHeader.tresolution);
+
+    curr_on_k = new double[getPointSize()];
+    curr_zr = new double[getPointSize()];
     //LOGGER("<< Created reader of raw data (floats per chunk: %f)", points_per_chunk);
 }
 
@@ -36,20 +39,18 @@ DataReader::~DataReader() {
         reading_thread = nullptr;
     }
     in.close();
+
+    delete[] calibration_on_k_left;
+    delete[] calibration_on_k_right;
+    delete[] calibration_zr_left;
+    delete[] calibration_zr_right;
+    delete[] curr_on_k;
+    delete[] curr_zr;
+
     LOGGER("<< Raw data reader was destroyed. Total time: reading - %f, calibrating - %f, copying - %f", time_reading / (float) CLOCKS_PER_SEC,
-            time_calibrating / (float) CLOCKS_PER_SEC, time_copying / (float) CLOCKS_PER_SEC);
+           time_calibrating / (float) CLOCKS_PER_SEC, time_copying / (float) CLOCKS_PER_SEC);
 }
 
-/*
-void DataReader::seekStarHour(double starHour){
-    double t = to_starTime(curr_file_time_duration_hours);
-    double points_ideal_star_hour = ideal_points / t;
-    double proportion = starHour - file_starTime_start_seconds;
-    if (proportion < 0)
-        proportion += 24;
-    point_seek(proportion * points_ideal_star_hour);
-}
-*/
 void DataReader::set_MJD_next(double next_MJD) {
     MJD_next_file = next_MJD;
 
@@ -58,6 +59,7 @@ void DataReader::set_MJD_next(double next_MJD) {
     if ((ideal_points - dataHeader.npoints) * dataHeader.tresolution > timeChunk_duration_sun){
         ideal_points = dataHeader.npoints;
         LOGGER(">> ERROR. while setting next MJD: gap > timeChunk_duration_sun (curr MDJ: %f, next_MJD: %f)", get_MJD_begin(), next_MJD);
+        throw logic_error("ERROR. while setting next MJD: gap > timeChunk_duration_sun");
     }
 }
 
@@ -73,21 +75,7 @@ double DataReader::getCurrStarTimeSecondsAligned(){
     return curr;
 }
 
-void DataReader::AlignByStarTimeChunk(/*DataReader *nextDataReader*/){
-    //if (nextDataReader_ == nullptr){
-    //    throw logic_error("nextDataReader_ == nullptr");
-    //}
-    //nextDataReader = nextDataReader_;
-
-    //curr_file_time_duration_hours = (nextDataReader->get_MJD_begin() - get_MJD_begin()) * 24;
-    //ideal_points = curr_file_time_duration_hours * 60 * 60 / dataHeader.tresolution;
-    //double t = to_starTime(curr_file_time_duration_hours);
-    //double points_ideal_star_hour = ideal_points / t;
-//
-//    double seconds_to_skip_star = timeChunk_duration_star - (file_starTime_start_seconds - int(file_starTime_start_seconds / timeChunk_duration_star) * timeChunk_duration_star);
-//    double seconds_to_skip_sun = to_SunTime(seconds_to_skip_star);
-//    double points_to_skip = seconds_to_skip_sun / dataHeader.tresolution;
-//    int points_to_skip_int = int(points_to_skip + 0.5);
+void DataReader::AlignByStarTimeChunk(){
     int points_to_skip_int = getCountPointsToNextAlignment(false);
     readNextPoints(nullptr, points_to_skip_int);
 }
@@ -108,21 +96,13 @@ int DataReader::getCountPointsToNextAlignment(bool need_to_ceil){
 
     double sun_seconds_to_read = to_SunTime(star_seconds_to_read);
     double points_to_read = sun_seconds_to_read / dataHeader.tresolution;
-    int points_to_read_int = int(points_to_read + 0.5);
+    int points_to_read_int = round(points_to_read);
 
     return points_to_read_int;
 }
 
 int DataReader::readNextPoints(float *point) {
-//    double curr_time = getCurrStarTimeSeconds();
-//    double star_seconds_to_read = timeChunk_duration_star - (curr_time - int(curr_time / timeChunk_duration_star) * timeChunk_duration_star);
-//    if (star_seconds_to_read < to_starTime(dataHeader.tresolution))
-//        star_seconds_to_read += timeChunk_duration_star;
-//    double sun_seconds_to_read = to_SunTime(star_seconds_to_read);
-//    double points_to_read = sun_seconds_to_read / dataHeader.tresolution;
-//    int points_to_read_int = int(points_to_read + 0.5);
     int points_to_read_int = getCountPointsToNextAlignment(true);
-
     return readNextPointsInternal(point, points_to_read_int, 0, points_to_read_int);
 }
 
@@ -137,12 +117,6 @@ int DataReader::readRemainder(float *point, int *remainder){
 
     return readNextPointsInternal(point, from_this_file, 0, from_this_file);
 }
-/*
-void DataReader::point_seek(double point){
-    int point_to_seek_int = int(point + 0.5);
-    remainder = float(point_to_seek_int - point);
-}
-*/
 
 int DataReader::readNextPointsInternal(float *point, int full_count, int offset, int local_count){
     if (!is_header_parsed) // may be disabled for perf purposes
@@ -171,17 +145,20 @@ int DataReader::readNextPointsInternal(float *point, int full_count, int offset,
         if (points_available > 0)
             out_count += readNextPointsInternal(point, full_count, offset, points_available);
 
-        swap_ready = true;
-        while (swap_ready)
-            this_thread::yield();
-
-        int start = clock();
-        calibrateArrayPoints((float *) buffer, min(points_before_switch_calibration, BUFFER_SIZE / (size_per_point)));
-        time_calibrating += clock() - start;
+        if (reading_thread != nullptr) {
+            swap_ready = true;
+            while (swap_ready)
+                this_thread::yield();
+        }
 
         out_count += readNextPointsInternal(point, full_count, offset + points_available, local_count - points_available);
     } else {
         int start = clock();
+        calibrateArrayPoints((float *) &buffer[buffer_pointer], local_count);
+        time_calibrating += clock() - start;
+
+
+        start = clock();
         if (point != nullptr) {
             auto *buff = (float *) &buffer[buffer_pointer];
             auto *point_ = &point[offset];
@@ -259,13 +236,13 @@ void DataReader::readingThread() {
 
 void DataReader::realloc(double *& base, double const * from){
     if (base != nullptr)
-        delete base;
+        delete[] base;
     base = new double[getPointSize()];
     memcpy(base, from, sizeof(double) * getPointSize());
 }
 
 void DataReader::updateCalibrationData(){
-    double currentPointMJD = dataHeader.MJD_begin + (count_read_points * dataHeader.tresolution) / 86400;
+    double currentPointMJD = get_MJD_current();
     CalibrationData * left = calibration->getCalibrationData_left_by_time(currentPointMJD);
     CalibrationData * right = calibration->getCalibrationData_right_by_time(currentPointMJD);
 
@@ -273,71 +250,46 @@ void DataReader::updateCalibrationData(){
 
     points_before_switch_calibration = ((right->get_MJD() - currentPointMJD) * 24 * 60 * 60 + dataHeader.tresolution - 0.000000001) / dataHeader.tresolution;
 
-    realloc(calibration_on_k, left->get_one_kelvin());
-    realloc(on_k_step, right->get_one_kelvin());
-    realloc(calibration_zr, left->get_zero_level());
-    realloc(zr_step, right->get_zero_level());
+    realloc(calibration_on_k_left, left->get_one_kelvin());
+    realloc(calibration_on_k_right, right->get_one_kelvin());
+    realloc(calibration_zr_left, left->get_zero_level());
+    realloc(calibration_zr_right, right->get_zero_level());
 
-    int i = getPointSize();
-    int n = ((right->get_MJD() - left->get_MJD()) * 24 * 60 * 60 + dataHeader.tresolution - 0.000000001) / dataHeader.tresolution;
-    while(--i >= 0){
-        on_k_step[i] = (on_k_step[i] - calibration_on_k[i]) / n;
-        zr_step[i] = (zr_step[i] - calibration_zr[i]) / n;
-    }
-
+    calibration_file_duration_in_points = ((right->get_MJD() - left->get_MJD()) * 24 * 60 * 60 + dataHeader.tresolution - 0.000000001) / dataHeader.tresolution;
 
     LOGGER(">> Switched actual calibration file (points before next switching: %d)", points_before_switch_calibration);
 }
 
 
 void DataReader::calibrateArrayPoints(float *point, int count) {
-    static const int calibrationChunkSize = 100;
+    static const int calibrationChunkSize = round(timeChunk_duration_sun / 10 / dataHeader.tresolution);
 
     LOGGER(">> Calibration of %d points was started. Calibration points step is %d points", count, calibrationChunkSize);
 
-    for (int t = 0; t < count / calibrationChunkSize; ++t)
+    int curr_calibrated = 0, arr_size = getPointSize();
+    double coef;
+    for (int t = 0; t < count / calibrationChunkSize; ++t){
+        coef = double(points_before_switch_calibration - curr_calibrated) / calibration_file_duration_in_points;
+
+        for (int i = 0; i < arr_size; ++i) {
+            curr_on_k[i] = coef * calibration_on_k_left[i] + (1 - coef) * calibration_on_k_right[i];
+            curr_zr[i] = coef * calibration_zr_left[i] + (1 - coef) * calibration_zr_right[i];
+        }
+
         calibrateArrayPointsDetailed(&point[t * calibrationChunkSize * floats_per_point], calibrationChunkSize);
+        curr_calibrated += calibrationChunkSize;
+    }
+
+
+    coef = double(points_before_switch_calibration - curr_calibrated) / calibration_file_duration_in_points;
+
+    for (int i = 0; i < arr_size; ++i) {
+        curr_on_k[i] = coef * calibration_on_k_left[i] + (1 - coef) * calibration_on_k_right[i];
+        curr_zr[i] = coef * calibration_zr_left[i] + (1 - coef) * calibration_zr_right[i];
+    }
 
     if (count % calibrationChunkSize != 0)
-        calibrateArrayPointsDetailed(&point[(count - count % calibrationChunkSize) * floats_per_point],
-                                     count % calibrationChunkSize);
+        calibrateArrayPointsDetailed(&point[(count - count % calibrationChunkSize) * floats_per_point], count % calibrationChunkSize);
 
     LOGGER("<< Calibration of %d points was finished", count);
-    /*
-    for (int i = 0; i < count; ++i) {
-        for (int j = 0; j < floats_per_point; ++j) {
-            point[i * floats_per_point + j] = (point[i * floats_per_point + j] - calibration_zr[j]) / calibration_on_k[j];
-            //calibration_on_k[j] += on_k_step[j];
-            //calibration_zr[j] += zr_step[j];
-        }
-    }
-
-    for(int i = 0; i < floats_per_point; ++i) {
-        calibration_on_k[i] += on_k_step[i] * count;
-        calibration_zr[i] += zr_step[i] * count;
-    }*/
 }
-
-void DataReader::calibrateArrayPointsDetailed(float *point, int size) {
-    for (int i = 0; i < size; ++i)
-        for (int j = 0; j < floats_per_point; ++j)
-            point[i * floats_per_point + j] = (point[i * floats_per_point + j] - calibration_zr[j]) / calibration_on_k[j];
-
-    for(int i = 0; i < floats_per_point; ++i) {
-        calibration_on_k[i] += on_k_step[i] * size;
-        calibration_zr[i] += zr_step[i] * size;
-    }
-}
-
-
-
-
-
-/*
-void DataReader::calibratePoint(float *point) { // may be manually inlined for perf purposes
-    float const *on_k = calibration->get_one_kelvin(), *zr = calibration->get_zero_level();
-
-    for (int i = 0; i < floats_per_point; ++i)
-        point[i] = (point[i] - zr[i]) / on_k[i];
-}
-*/

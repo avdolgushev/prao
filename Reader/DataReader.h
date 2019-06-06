@@ -17,14 +17,14 @@
 
 class DataReader{
     bool is_header_parsed = false; // true if header has been parsed
-    int count_read_points = 0, points_before_switch_calibration = 0; // how many points are already read from file; how many points remains with current calibration data
+    int count_read_points = 0, points_before_switch_calibration = 0, calibration_file_duration_in_points = 0; // how many points are already read from file; how many points remains with current calibration data
     int floats_per_point = 0, size_per_point = 0; // how many floats during time resolution; the size of that floats
     //streampos floats_offset = 0;
     DataHeader dataHeader = {}; // header of the file
 
 
     CalibrationDataStorage *calibration; // the storage that stores all related calibration data objects
-    double *calibration_on_k = nullptr, *on_k_step = nullptr, *calibration_zr = nullptr, *zr_step = nullptr; // data used during calibration
+    double *calibration_on_k_left = nullptr, *calibration_on_k_right = nullptr, *calibration_zr_left = nullptr, *calibration_zr_right = nullptr, *curr_on_k = nullptr, *curr_zr = nullptr; // data used during calibration
 
     ifstream in; // the stream from which reading is performed
     static constexpr int BUFFER_SIZE = 0x1000 * 33 * 7 * 3 * 4; // disk sector size + count of big channels + count of small channels + 48 modules + coef ~11MB
@@ -50,7 +50,12 @@ class DataReader{
     /// \breif sets appropriate calibration data regard to count_read_points
     void updateCalibrationData();
     void calibrateArrayPoints(float *point, int count);
-    void calibrateArrayPointsDetailed(float *point, int size);
+
+    inline void calibrateArrayPointsDetailed(float *point, int size) {
+        for (int i = 0; i < size; ++i)
+            for (int j = 0; j < floats_per_point; ++j)
+                point[i * floats_per_point + j] = (point[i * floats_per_point + j] - curr_zr[j]) / curr_on_k[j];
+    }
 
     /// \breif read points recursive implementation
     /// \param point destination
@@ -94,6 +99,11 @@ public:
     /// \breif get date start in MJD format
     inline double get_MJD_begin(){
         return dataHeader.MJD_begin;
+    }
+
+    /// \breif get date start in MJD format
+    inline double get_MJD_current(){
+        return dataHeader.MJD_begin + (count_read_points * dataHeader.tresolution) / 86400;
     }
 
     /// \brief check that available at least one chunk of point regard to chunk time
