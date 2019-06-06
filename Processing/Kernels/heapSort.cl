@@ -35,8 +35,8 @@ struct metrics {
     float median; 				// median of all
     float variance; 			// variance of all
     float variance_bounded; 	// variance of bounded
-    float left_bound; 			// the left bound value based on which the bounded var is calculated
-    float right_bound; 			// the right bound value based on which the bounded var is calculated
+    //float left_bound; 			// the left bound value based on which the bounded var is calculated
+    //float right_bound; 			// the right bound value based on which the bounded var is calculated
 };
 
 
@@ -111,6 +111,6 @@ __kernel void getMetrics(__global float* inp, __global struct metrics * output, 
 	curr_out->median = med_value;
 	curr_out->variance = (float)D;
 	curr_out->variance_bounded = (float)D_bounded;
-	curr_out->left_bound = (float)left_bound;
-	curr_out->right_bound = (float)right_bound;
+	//curr_out->left_bound = (float)left_bound;
+	//curr_out->right_bound = (float)right_bound;
 }

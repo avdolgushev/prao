@@ -106,9 +106,9 @@ void metrics::check_natively_over_CPU(float * input, metrics * calculated, int c
             cout << "D " << i << endl;
         if (fabs(D2 - calculated->variance_bounded) > comparing_accuracy)
             cout << "D2 " << i << endl;
-        if (left_bound != calculated->left_bound || left_bound == 0)
-            cout << "left_bound " << i << endl;
-        if (right_bound != calculated->right_bound || right_bound == 0)
-            cout << "right_bound " << i << endl;
+//        if (left_bound != calculated->left_bound || left_bound == 0)
+//            cout << "left_bound " << i << endl;
+//        if (right_bound != calculated->right_bound || right_bound == 0)
+//            cout << "right_bound " << i << endl;
     }
 }

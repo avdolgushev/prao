@@ -12,7 +12,7 @@
 using namespace std;
 
 struct metrics {
-    static const int metric_count = 9;
+    static const int metric_count = 7;
     float min; 					// minimum of all
     float max; 					// maximum of all
     float max_ind; 				// index of maximum of all
@@ -20,8 +20,8 @@ struct metrics {
     float median; 				// median of all
     float variance; 			// variance of all
     float variance_bounded; 	// variance of bounded
-    float left_bound; 			// the left bound value based on which the bounded var is calculated
-    float right_bound; 			// the right bound value based on which the bounded var is calculated
+    //float left_bound; 			// the left bound value based on which the bounded var is calculated
+    //float right_bound; 			// the right bound value based on which the bounded var is calculated
 
 
     /// \brief calculates the need metrics over CPU and compares with proveded (accuracy is 0.1)
