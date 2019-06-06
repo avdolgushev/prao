@@ -6,32 +6,34 @@
 
 DataReader* FilesListItem::getDataReader(double starSeconds_timeChunk_dur){
     if (reader == nullptr) {
-        if (nextItemInfo != nullptr)
-            MJD_difference = nextItemInfo->time_JD - time_JD;
+        reader = new DataReader(filepath, starSeconds_timeChunk_dur, star_time_start);
 
-        reader = new DataReader(filepath, starSeconds_timeChunk_dur, star_time_start, MJD_difference);
+        //if (nextDataReader != nullptr)
+            //MJD_difference = nextDataReader->get_MJD_begin() - reader->get_MJD_begin();
     }
     return reader;
 }
 
-FilesListItem::~FilesListItem(){
-    if (reader != nullptr) {
-        delete reader;
-        reader = nullptr;
-    }
-}
+//FilesListItem::~FilesListItem(){
+//    if (reader != nullptr) {
+//        delete reader;
+//        reader = nullptr;
+//    }
+//}
 
 bool FilesListItem::good() {
     return nbands != 0;
 }
 
-void FilesListItem::SetNextFileInfo(FilesListItem * next) {
-    if (nextItemInfo != nullptr) {
-        throw logic_error("nextItemInfo has been already set");
-    }
-    else
-        nextItemInfo = next;
-}
+//void FilesListItem::AlignByStarTimeChunk(DataReader *next) {
+//    if (nextDataReader != nullptr) {
+//        throw logic_error("nextDataReader has already been set");
+//    }
+//    else {
+//        nextDataReader = next;
+//        reader->AlignByStarTimeChunk(/*nextDataReader*/);
+//    }
+//}
 
 istream &operator>>(istream & in, FilesListItem& dt){
     LOGGER(">> Read file description from files list");
@@ -62,6 +64,8 @@ istream &operator>>(istream & in, FilesListItem& dt){
 
     getline(in, tmp, '\n');
     dt.time_JD = atof(tmp.c_str());
+
+    dt.reader = nullptr;
 
     LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_JD);
     return in;

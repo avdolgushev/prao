@@ -6,58 +6,147 @@
 
 #include "Compresser.h"
 
+#include <iomanip>
 
 void Compresser::run() {
     /* get calibration files */
     CalibrationDataStorage *storage = readCalibrationDataStorage(calibrationListPath);
     ifstream in(fileListPath);
 
-    FilesListItem item_curr, item_next;
+    FilesListItem *item = new FilesListItem(), *item_next = new FilesListItem();
+    DataReader *reader, *readerNext;
 
-    in >> item_curr;
-    while(item_curr.good()) {
-        in >> item_next;
-        if (item_next.good()) {
-            item_curr.SetNextFileInfo(&item_next);
+    in >> *item;
+    reader = item->getDataReader(starSeconds);
+    reader->setCalibrationData(storage);
+    reader->AlignByStarTimeChunk();
+    auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
+
+    int remains = 0, offset = 0;
+    double curr_starTime_seconds;
+    MetricsContainer container;
+    storageEntry *metrics_storage;
+    while(reader != nullptr) {
+        //std::cout << std::setprecision(10) << reader->getCurrStarTimeSecondsAligned() << std::endl;
+        in >> *item_next;
+
+        if (item_next->good()) {
+            readerNext = item_next->getDataReader(starSeconds);
+            readerNext->setCalibrationData(storage);
+            reader->set_MJD_next(readerNext->get_MJD_begin());
+        } else
+            readerNext = nullptr;
+
+
+        int count;
+        if (remains){
+            std::cout << std::setprecision(10) << curr_starTime_seconds << std::endl;
+            count = offset + reader->readNextPoints(data_reordered_buffer, remains, offset);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
+            auto *metrics_buffer = calculator.calc();
+            metrics_storage->addNewMetrics(curr_starTime_seconds, metrics_buffer);
+            remains = 0;
         }
-
-        DataReader *reader = item_curr.getDataReader(starSeconds);
-        auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
-        reader->setCalibrationData(storage);
-        reader->seekStarHour(ceil(item_curr.star_time_start));
-
-        MetricsContainer container(reader);
-        int i = 1;
+        metrics_storage = container.addNewFilesListItem(item);
 
         while (!reader->eof()) {
-            int count = reader->readNextPoints(data_reordered_buffer);
-            MetricsCalculator
-                    calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count,
-                                                   localWorkSize,
-                                                   leftPercentile,
-                                                   rightPercentile);
+            curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
+            std::cout << std::setprecision(10) << curr_starTime_seconds << std::endl;
+            count = reader->readNextPoints(data_reordered_buffer);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
+            auto *metrics_buffer = calculator.calc();
+            metrics_storage->addNewMetrics(curr_starTime_seconds, metrics_buffer);
+        }
+
+        curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
+        offset = reader->readRemainder(data_reordered_buffer, &remains);
+
+        container.flush();
+
+        //std::cout << std::setprecision(10) << reader->getCurrStarTimeSecondsAligned() << std::endl;
+        delete reader;
+        reader = readerNext;
+        item = item_next;
+    }
+}
+/*
+void Compresser::run1() {
+    CalibrationDataStorage *storage = readCalibrationDataStorage(calibrationListPath);
+    ifstream in(fileListPath);
+
+    FilesListItem item;
+    DataReader *reader, *readerNext;
+
+    in >> item;
+    reader = item.getDataReader(starSeconds);
+    reader->setCalibrationData(storage);
+    reader->AlignByStarTimeChunk();
+    auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
+
+    int remains = 0, offset = 0;
+    double curr_starTime_seconds;
+    while(reader != nullptr) {
+        std::cout << std::setprecision(10) << reader->getCurrStarTimeSeconds() << std::endl;
+        in >> item;
+
+        if (item.good()) {
+            readerNext = item.getDataReader(starSeconds);
+            readerNext->setCalibrationData(storage);
+            reader->set_MJD_next(readerNext->get_MJD_begin());
+        } else
+            readerNext = nullptr;
+
+        MetricsContainer container(reader);
+
+        int count;
+        if (remains){
+            std::cout << std::setprecision(10) << curr_starTime_seconds << std::endl;
+            count = offset + reader->readNextPoints(data_reordered_buffer, remains, offset);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
+            auto *metrics_buffer = calculator.calc();
+            container.addNewMetrics(metrics_buffer);
+            remains = 0, offset = 0;
+        }
+
+        int i = 1;
+        while (!reader->eof()) {
+            curr_starTime_seconds = reader->getCurrStarTimeSeconds();
+            std::cout << std::setprecision(10) << curr_starTime_seconds << std::endl;
+            count = reader->readNextPoints(data_reordered_buffer);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
             auto *metrics_buffer = calculator.calc();
             container.addNewMetrics(metrics_buffer);
 
-            if (i % 30 == 0)
-                std::cout << i << " arrays calculated..." << std::endl;
-            ++i;
+//            if (i % 30 == 0)
+//                std::cout << i << " arrays calculated..." << std::endl;
+//            ++i;
         }
+
+        curr_starTime_seconds = reader->getCurrStarTimeSeconds();
+        offset = reader->readRemainder(data_reordered_buffer, &remains);
         // TODO
-
-        container.saveToFile(outputPath + '\\' + item_curr.filename + ".processed");
-        item_curr = item_next;
+        container.saveToFile(outputPath + '\\' + item.filename + ".processed");
+        std::cout << std::setprecision(10) << reader->getCurrStarTimeSeconds() << std::endl;
+        delete reader;
+        reader = readerNext;
     }
+}
 
-
-
-
+void Compresser::run3() {
+    CalibrationDataStorage *storage = readCalibrationDataStorage(calibrationListPath);
+    ifstream in(fileListPath);
+    bool first = true;
 
     while (!in.eof()) {
-        in >> item_curr;
-        DataReader *reader = item_curr.getDataReader(starSeconds);
-        auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
+        FilesListItem item;
+        in >> item;
+        DataReader *reader = item.getDataReader(starSeconds);
         reader->setCalibrationData(storage);
+        if (first){
+            reader->AlignByStarTimeChunk();
+            first = false;
+        }
+        auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
 
         MetricsContainer container(reader);
 
@@ -67,10 +156,10 @@ void Compresser::run() {
         try {
             while (!reader->eof()) {
                 tStart2 = clock();
+                double curr_starTime_seconds = reader->getCurrStarTimeSeconds();
                 int count = reader->readNextPoints(data_reordered_buffer);
                 sum2 += clock() - tStart2;
-                MetricsCalculator
-                        calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count,
+                MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count,
                                                        localWorkSize,
                                                        leftPercentile,
                                                        rightPercentile);
@@ -94,7 +183,7 @@ void Compresser::run() {
             std::cout << "copying work time: " << (float) (reader->time_copying) / (float) CLOCKS_PER_SEC << "s"
                       << std::endl;
 
-            container.saveToFile(outputPath + '\\' + item_curr.filename + ".processed");
+            container.saveToFile(outputPath + '\\' + item.filename + ".processed");
         }
         catch (logic_error e) {
             std::cout << e.what() << std::endl;
@@ -106,7 +195,6 @@ void Compresser::run() {
 
 
 void Compresser::run2() {
-    /* get calibration files */
     CalibrationDataStorage *storage = readCalibrationDataStorage(calibrationListPath);
     ifstream in(fileListPath);
     while (!in.eof()) {
@@ -160,7 +248,7 @@ void Compresser::run2() {
 
     }
 }
-
+*/
 CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_calibration) {
     LOGGER(">> Creating storage of calibration signals from file %s", path_calibration.c_str());
     float start = 0, diff = 0;

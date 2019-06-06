@@ -19,8 +19,9 @@ class DataReader{
     bool is_header_parsed = false; // true if header has been parsed
     int count_read_points = 0, points_before_switch_calibration = 0; // how many points are already read from file; how many points remains with current calibration data
     int floats_per_point = 0, size_per_point = 0; // how many floats during time resolution; the size of that floats
-    float points_per_chunk = 0, remainder = 0; // how many points the time chunk consists of; the remainder while reading integer of points_per_chunk
+    //streampos floats_offset = 0;
     DataHeader dataHeader = {}; // header of the file
+
 
     CalibrationDataStorage *calibration; // the storage that stores all related calibration data objects
     double *calibration_on_k = nullptr, *on_k_step = nullptr, *calibration_zr = nullptr, *zr_step = nullptr; // data used during calibration
@@ -35,8 +36,11 @@ class DataReader{
     thread *reading_thread = nullptr;
 
     double timeChunk_duration_star = 0, timeChunk_duration_sun = 0; // seconds of chunk to be read in star time and in sun time
-    double curr_file_starTime_start = 0, curr_file_time_duration_hours = 0;
+    double file_starTime_start_seconds = 0, curr_file_time_duration_hours = 0;
+    //double file_starTime_curr_seconds = 0;
     double ideal_points = 0;
+    double MJD_next_file = 0;
+    //DataReader * nextDataReader = nullptr;
 
     void readHeader();
     void prepareReading();
@@ -48,13 +52,12 @@ class DataReader{
     void calibrateArrayPoints(float *point, int count);
     void calibrateArrayPointsDetailed(float *point, int size);
 
-    void point_seek(double point);
     /// \breif read points recursive implementation
     /// \param point destination
     /// \param full_count count of points to read
     /// \param offset offset in destination to which read local_count points
     /// \param local_count count of points to read during current recursive call
-    void readNextPointsInternal(float *point, int full_count, int offset, int local_count);
+    int readNextPointsInternal(float *point, int full_count, int offset, int local_count);
 public:
     int time_reading = 0;
     int time_calibrating = 0;
@@ -62,17 +65,20 @@ public:
 
     /// \param filepath path to file from which read
     /// \param starSeconds_timeChunk_dur duration in star seconds of how many points will be read by call to readNextPoints
-    explicit DataReader(string filepath, double starSeconds_timeChunk_dur, double star_time_start, double MJD_duration);
+    explicit DataReader(string filepath, double starSeconds_timeChunk_dur, double star_time_start);
     ~DataReader();
 
-    void seekStarHour(double starHour);
-
+    void set_MJD_next(double next_MJD);
+    double getCurrStarTimeSeconds();
+    double getCurrStarTimeSecondsAligned();
+    int getCountPointsToNextAlignment(bool need_to_ceil);
+    void AlignByStarTimeChunk(/*DataReader *nextDataReader*/);
     /// \breif set calibration signals
     void setCalibrationData(CalibrationDataStorage *calibrationData);
 
     /// \breif get size of array that should be passed to read points for the specified in ctor time
     inline int getNeedBufferSize(){
-        return floats_per_point * int(points_per_chunk + 1);
+        return floats_per_point * int(timeChunk_duration_sun / dataHeader.tresolution + 1);
     }
 
     /// \breif get count of floats in point regard to file time resolution
@@ -86,25 +92,27 @@ public:
     }
 
     /// \breif get date start in MJD format
-    inline float get_MJD_begin(){
+    inline double get_MJD_begin(){
         return dataHeader.MJD_begin;
     }
 
     /// \brief check that available at least one chunk of point regard to chunk time
     inline bool eof() {
-        return ceil(count_read_points + points_per_chunk + remainder) >= dataHeader.npoints;
+        return count_read_points + getCountPointsToNextAlignment(true) > ideal_points;
     }
 
     /// \brief check that available at least count of points
     inline bool eof(int count) {
-        return count_read_points + count >= dataHeader.npoints;
+        return count_read_points + count > ideal_points;
     }
 
     /// \brief read points regard to time chunk specified in ctor
     /// \param to destination
     /// \return count of points were read
     int readNextPoints(float *to);
-    void readNextPoints(float *to, int count);
+    int readNextPoints(float *to, int count, int offset = 0);
+
+    int readRemainder(float *to, int *remainder);
 };
 
 #endif //PRAO_COMPRESSER_DATEREADER_H

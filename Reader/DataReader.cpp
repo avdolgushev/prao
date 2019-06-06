@@ -4,7 +4,7 @@
 
 #include "DataReader.h"
 
-DataReader::DataReader(string path, double starSeconds_timeChunk_dur, double star_time_start, double MJD_duration) {
+DataReader::DataReader(string path, double starSeconds_timeChunk_dur, double star_time_start) {
     LOGGER(">> Create reader of raw data (star time of chunk: %f\tfile: %s)", starSeconds_timeChunk_dur, path.c_str());
     in = ifstream(path, ios::binary | ios::in);
     if (!in.good()) {
@@ -12,16 +12,15 @@ DataReader::DataReader(string path, double starSeconds_timeChunk_dur, double sta
         throw logic_error(path + " file not found");
     }
     readHeader();
-    curr_file_starTime_start = star_time_start;
-    curr_file_time_duration_hours = MJD_duration * 24;
-    ideal_points = curr_file_time_duration_hours * 60 * 60 / dataHeader.tresolution;
-
-
+    //floats_offset = in.tellg();
+    file_starTime_start_seconds = star_time_start * 60 * 60;
+    //file_starTime_curr_seconds = star_time_start * 60 * 60;
+    ideal_points = dataHeader.npoints;
 
     timeChunk_duration_star = starSeconds_timeChunk_dur;
     timeChunk_duration_sun = to_SunTime(starSeconds_timeChunk_dur);
-    points_per_chunk = float(timeChunk_duration_sun / dataHeader.tresolution);
-    LOGGER("<< Created reader of raw data (floats per chunk: %f)", points_per_chunk);
+    //points_per_chunk = float(timeChunk_duration_sun / dataHeader.tresolution);
+    //LOGGER("<< Created reader of raw data (floats per chunk: %f)", points_per_chunk);
 }
 
 DataReader::~DataReader() {
@@ -30,9 +29,9 @@ DataReader::~DataReader() {
         buffer = nullptr;
     }
     if (buffer_second != nullptr){
+        reading_thread->join();
         delete(buffer_second);
         buffer_second = nullptr;
-        reading_thread->join();
         delete reading_thread;
         reading_thread = nullptr;
     }
@@ -41,14 +40,56 @@ DataReader::~DataReader() {
             time_calibrating / (float) CLOCKS_PER_SEC, time_copying / (float) CLOCKS_PER_SEC);
 }
 
-
+/*
 void DataReader::seekStarHour(double starHour){
     double t = to_starTime(curr_file_time_duration_hours);
     double points_ideal_star_hour = ideal_points / t;
-    double proportion = starHour - curr_file_starTime_start;
+    double proportion = starHour - file_starTime_start_seconds;
     if (proportion < 0)
         proportion += 24;
     point_seek(proportion * points_ideal_star_hour);
+}
+*/
+void DataReader::set_MJD_next(double next_MJD) {
+    MJD_next_file = next_MJD;
+
+    double MJD_duration = (next_MJD - get_MJD_begin()) * 24 * 60 * 60;
+    ideal_points = round(MJD_duration / dataHeader.tresolution);
+    if ((ideal_points - dataHeader.npoints) * dataHeader.tresolution > timeChunk_duration_sun){
+        ideal_points = dataHeader.npoints;
+        LOGGER(">> ERROR. while setting next MJD: gap > timeChunk_duration_sun (curr MDJ: %f, next_MJD: %f)", get_MJD_begin(), next_MJD);
+    }
+}
+
+double DataReader::getCurrStarTimeSeconds(){
+    return file_starTime_start_seconds + count_read_points * to_starTime(dataHeader.tresolution);
+}
+double DataReader::getCurrStarTimeSecondsAligned(){
+    double curr = file_starTime_start_seconds + count_read_points * to_starTime(dataHeader.tresolution);
+    curr = curr + to_starTime(dataHeader.tresolution);
+    curr = (int)(curr / timeChunk_duration_star);
+    curr = curr * timeChunk_duration_star;
+
+    return curr;
+}
+
+void DataReader::AlignByStarTimeChunk(/*DataReader *nextDataReader*/){
+    //if (nextDataReader_ == nullptr){
+    //    throw logic_error("nextDataReader_ == nullptr");
+    //}
+    //nextDataReader = nextDataReader_;
+
+    //curr_file_time_duration_hours = (nextDataReader->get_MJD_begin() - get_MJD_begin()) * 24;
+    //ideal_points = curr_file_time_duration_hours * 60 * 60 / dataHeader.tresolution;
+    //double t = to_starTime(curr_file_time_duration_hours);
+    //double points_ideal_star_hour = ideal_points / t;
+//
+//    double seconds_to_skip_star = timeChunk_duration_star - (file_starTime_start_seconds - int(file_starTime_start_seconds / timeChunk_duration_star) * timeChunk_duration_star);
+//    double seconds_to_skip_sun = to_SunTime(seconds_to_skip_star);
+//    double points_to_skip = seconds_to_skip_sun / dataHeader.tresolution;
+//    int points_to_skip_int = int(points_to_skip + 0.5);
+    int points_to_skip_int = getCountPointsToNextAlignment(false);
+    readNextPoints(nullptr, points_to_skip_int);
 }
 
 void DataReader::setCalibrationData(CalibrationDataStorage *calibrationData){
@@ -57,46 +98,78 @@ void DataReader::setCalibrationData(CalibrationDataStorage *calibrationData){
     updateCalibrationData();
 }
 
+int DataReader::getCountPointsToNextAlignment(bool need_to_ceil){
+    double star_seconds_to_read, base_time;
+    base_time = getCurrStarTimeSeconds();
+
+    star_seconds_to_read = timeChunk_duration_star - (base_time - int(base_time / timeChunk_duration_star) * timeChunk_duration_star);
+    if (need_to_ceil && star_seconds_to_read < to_starTime(dataHeader.tresolution))
+        star_seconds_to_read += timeChunk_duration_star;
+
+    double sun_seconds_to_read = to_SunTime(star_seconds_to_read);
+    double points_to_read = sun_seconds_to_read / dataHeader.tresolution;
+    int points_to_read_int = int(points_to_read + 0.5);
+
+    return points_to_read_int;
+}
 
 int DataReader::readNextPoints(float *point) {
-    int count = int(points_per_chunk + remainder + 0.5);
-    remainder += points_per_chunk - count;
-    readNextPointsInternal(point, count, 0, count);
+//    double curr_time = getCurrStarTimeSeconds();
+//    double star_seconds_to_read = timeChunk_duration_star - (curr_time - int(curr_time / timeChunk_duration_star) * timeChunk_duration_star);
+//    if (star_seconds_to_read < to_starTime(dataHeader.tresolution))
+//        star_seconds_to_read += timeChunk_duration_star;
+//    double sun_seconds_to_read = to_SunTime(star_seconds_to_read);
+//    double points_to_read = sun_seconds_to_read / dataHeader.tresolution;
+//    int points_to_read_int = int(points_to_read + 0.5);
+    int points_to_read_int = getCountPointsToNextAlignment(true);
 
-    return count;
+    return readNextPointsInternal(point, points_to_read_int, 0, points_to_read_int);
 }
 
-void DataReader::readNextPoints(float *point, int count) {
-    readNextPointsInternal(point, count, 0, count);
+int DataReader::readNextPoints(float *point, int count, int offset) {
+    return readNextPointsInternal(point, count, offset, count);
 }
 
+int DataReader::readRemainder(float *point, int *remainder){
+    int points_to_read_int = getCountPointsToNextAlignment(true);
+    int from_this_file = int(ideal_points - count_read_points);
+    *remainder = points_to_read_int - from_this_file;
+
+    return readNextPointsInternal(point, from_this_file, 0, from_this_file);
+}
+/*
 void DataReader::point_seek(double point){
     int point_to_seek_int = int(point + 0.5);
     remainder = float(point_to_seek_int - point);
-
-
 }
+*/
 
-void DataReader::readNextPointsInternal(float *point, int full_count, int offset, int local_count){
+int DataReader::readNextPointsInternal(float *point, int full_count, int offset, int local_count){
     if (!is_header_parsed) // may be disabled for perf purposes
         readHeader();
     if (!reading_started)
         prepareReading();
 
-    if (count_read_points + local_count > dataHeader.npoints) // may be disabled for perf purposes
+    int out_count = 0;
+    if (count_read_points + local_count > ideal_points)
         throw logic_error("count of points is exceed");
 
-
-    if (points_before_switch_calibration < local_count){
+    if (count_read_points + local_count > dataHeader.npoints){
+        int saved = dataHeader.npoints - count_read_points;
+        out_count += readNextPointsInternal(point, saved, offset, saved);
+        points_before_switch_calibration -= local_count - saved;
+        count_read_points += local_count - saved;
+    }
+    else if (points_before_switch_calibration < local_count){
         int saved = points_before_switch_calibration;
-        readNextPointsInternal(point, full_count, offset, points_before_switch_calibration);
+        out_count += readNextPointsInternal(point, full_count, offset, points_before_switch_calibration);
         updateCalibrationData();
-        readNextPointsInternal(point, full_count, offset + saved, local_count - saved);
+        out_count += readNextPointsInternal(point, full_count, offset + saved, local_count - saved);
     }
     else if (buffer_pointer + local_count * size_per_point > BUFFER_SIZE){
         int points_available = (BUFFER_SIZE - buffer_pointer) / (size_per_point);
         if (points_available > 0)
-            readNextPointsInternal(point, full_count, offset, points_available);
+            out_count += readNextPointsInternal(point, full_count, offset, points_available);
 
         swap_ready = true;
         while (swap_ready)
@@ -106,21 +179,24 @@ void DataReader::readNextPointsInternal(float *point, int full_count, int offset
         calibrateArrayPoints((float *) buffer, min(points_before_switch_calibration, BUFFER_SIZE / (size_per_point)));
         time_calibrating += clock() - start;
 
-        readNextPointsInternal(point, full_count, offset + points_available, local_count - points_available);
+        out_count += readNextPointsInternal(point, full_count, offset + points_available, local_count - points_available);
     } else {
         int start = clock();
-        auto * buff = (float *)&buffer[buffer_pointer];
-        auto * point_ = &point[offset];
-        for (int i = 0; i < floats_per_point; ++i)
-            for (int j = 0; j < local_count; ++j)
-                point_[i * full_count + j] = buff[j * floats_per_point + i];
-
+        if (point != nullptr) {
+            auto *buff = (float *) &buffer[buffer_pointer];
+            auto *point_ = &point[offset];
+            for (int i = 0; i < floats_per_point; ++i)
+                for (int j = 0; j < local_count; ++j)
+                    point_[i * full_count + j] = buff[j * floats_per_point + i];
+        }
         buffer_pointer += size_per_point * local_count;
 
         points_before_switch_calibration -= local_count;
         count_read_points += local_count;
         time_copying += clock() - start;
+        out_count += local_count;
     }
+    return out_count;
 }
 
 

@@ -24,14 +24,14 @@ struct FilesListItem{
     double tresolution = 0, star_time_start = 0, star_time_end = 0, time_JD = 0;
     DataReader *reader = nullptr;
 
-    FilesListItem *nextItemInfo = nullptr;
-    double MJD_difference = 0;
+    //DataReader *nextDataReader = nullptr;
+    //double MJD_difference = 0;
 
-    DataReader* getDataReader(double starSeconds_timeChunk_dur);
-    ~FilesListItem();
+    DataReader* getDataReader(double starSeconds_timeChunk_dur = 10);
+//    ~FilesListItem();
     bool good();
 
-    void SetNextFileInfo(FilesListItem * next);
+//    void AlignByStarTimeChunk(DataReader *next);
 
     friend istream &operator>>(istream & in, FilesListItem& dt);
 };
