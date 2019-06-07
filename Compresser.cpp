@@ -7,14 +7,14 @@
 
 void Compresser::run() {
     /* get calibration files */
-    CalibrationDataStorage *storage = readCalibrationDataStorage(calibrationListPath);
-    ifstream in(fileListPath);
+    CalibrationDataStorage *storage = readCalibrationDataStorage(Configuration.calibrationListPath);
+    ifstream in(Configuration.fileListPath);
 
     FilesListItem *item = new FilesListItem(), *item_next = new FilesListItem();
     DataReader *reader, *readerNext;
 
     in >> *item;
-    reader = item->getDataReader(starSeconds);
+    reader = item->getDataReader(Configuration.starSeconds);
     reader->setCalibrationData(storage);
     reader->AlignByStarTimeChunk();
     auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
@@ -27,7 +27,7 @@ void Compresser::run() {
         in >> *item_next;
 
         if (item_next->good()) {
-            readerNext = item_next->getDataReader(starSeconds);
+            readerNext = item_next->getDataReader(Configuration.starSeconds);
             readerNext->setCalibrationData(storage);
             reader->set_MJD_next(readerNext->get_MJD_begin());
         } else
@@ -37,7 +37,7 @@ void Compresser::run() {
         int start, time_processing_curr = 0;
         if (remains){
             count = offset + reader->readNextPoints(data_reordered_buffer, remains, offset);
-            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
             metrics_storage->addNewMetrics(curr_starTime_seconds, calculator.calc());
             remains = 0;
         }
@@ -47,7 +47,7 @@ void Compresser::run() {
         while (!reader->eof()) {
             curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
             count = reader->readNextPoints(data_reordered_buffer);
-            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, localWorkSize, leftPercentile, rightPercentile);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
             start = clock();
             metrics_storage->addNewMetrics(curr_starTime_seconds, calculator.calc());
             time_processing_curr += clock() - start;
@@ -81,19 +81,9 @@ CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_
 }
 
 
-Compresser::Compresser(char *configFile, const OpenCLContext context) {
+Compresser::Compresser(const OpenCLContext context) {
     this->context = context;
-
-    Config cfg = Config(configFile);
-    this->outputPath = cfg.getOutputPath();
-    this->leftPercentile = cfg.getLeftPercentile();
-    this->rightPercentile = cfg.getRightPercentile();
-    this->starSeconds = cfg.getStarSeconds();
-    this->localWorkSize = cfg.getLocalWorkSize();
-    this->fileListPath = cfg.getFileListPath();
-    this->calibrationListPath = cfg.getCalibrationListPath();
-    int algorithm = cfg.getAlgorithm();
-    this->context.initMetricsKernels(algorithm);
+    this->context.initMetricsKernels(Configuration.algorithm);
 }
 
 

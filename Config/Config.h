@@ -7,18 +7,21 @@
 
 
 #include <string>
+#include <iostream>
+
 #include "../rapidjson/document.h"
 #include "../rapidjson/writer.h"
 #include "../rapidjson/stringbuffer.h"
 #include "../rapidjson/filereadstream.h"
 
+
+#define Configuration getObj()
+
 using namespace rapidjson;
 
-class Config {
-public:
-    explicit Config(char *fileName);
+struct Config {
+    void readFrom(char *fileName);
 
-private:
     std::string fileListPath;
     std::string calibrationListPath;
     size_t localWorkSize;
@@ -28,39 +31,8 @@ private:
     std::string outputPath;
     int algorithm;
 
-public:
-    int getAlgorithm() const {
-        return algorithm;
-    }
-
-    const std::string &getFileListPath() const {
-        return fileListPath;
-    }
-
-    const std::string &getCalibrationListPath() const {
-        return calibrationListPath;
-    }
-
-    size_t getLocalWorkSize() const {
-        return localWorkSize;
-    }
-
-    double getStarSeconds() const {
-        return starSeconds;
-    }
-
-    float getLeftPercentile() const {
-        return leftPercentile;
-    }
-
-    float getRightPercentile() const {
-        return rightPercentile;
-    }
-
-    const std::string &getOutputPath() const {
-        return outputPath;
-    }
 };
 
-
+extern Config Config_static;
+Config & getObj();
 #endif //PRAO_COMPRESSER_CONFIG_H

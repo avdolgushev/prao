@@ -23,15 +23,6 @@
 #include "Logger/Logger.h"
 
 class Compresser {
-private:
-    /* это приходит в конфиге */
-    std::string fileListPath;
-    std::string calibrationListPath;
-    size_t localWorkSize{};
-    double starSeconds{};
-    float leftPercentile{};
-    float rightPercentile{};
-    std::string outputPath;
 
 private:
 
@@ -43,8 +34,7 @@ private:
 
 
 public:
-    Compresser() = default;
-    Compresser(char* configFile, OpenCLContext context);
+    Compresser(OpenCLContext context);
 
 
     /**

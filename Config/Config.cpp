@@ -2,11 +2,10 @@
 // Created by sorrow on 14.03.19.
 //
 
-#include <iostream>
 #include "Config.h"
 
-Config::Config(char *fileName) {
-    std::cout<<"parsing config..." << std::endl;
+void Config::readFrom(char *fileName) {
+    std::cout << "parsing config..." << std::endl;
     FILE *fp = fopen(fileName, "r"); // non-Windows use "r"
     char readBuffer[2048];
     FileReadStream is(fp, readBuffer, sizeof(readBuffer));
@@ -31,4 +30,9 @@ Config::Config(char *fileName) {
     this->rightPercentile = d["rightPercentile"].GetFloat();
     this->outputPath = d["outputPath"].GetString();
     this->algorithm = d["algorithm"].GetInt();
+}
+
+Config Config_static;
+Config & getObj() {
+    return Config_static;
 }
