@@ -21,17 +21,17 @@ struct FilesListItem{
     string filename = string();
     string filepath = string();
     int nbands = 0, npoints = 0;
-    double tresolution = 0, star_time_start = 0, star_time_end = 0, time_JD = 0;
+    double tresolution = 0, star_time_start = 0, star_time_end = 0, time_MJD = 0;
     DataReader *reader = nullptr;
 
-    //DataReader *nextDataReader = nullptr;
-    //double MJD_difference = 0;
 
-    DataReader* getDataReader(double starSeconds_timeChunk_dur = 10);
+    DataReader* getDataReader(double starSeconds_timeChunk_dur);
+    inline DataReader* getDataReader(){
+        return reader;
+    }
 //    ~FilesListItem();
     bool good();
 
-//    void AlignByStarTimeChunk(DataReader *next);
 
     friend istream &operator>>(istream & in, FilesListItem& dt);
 };

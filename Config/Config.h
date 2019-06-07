@@ -8,12 +8,16 @@
 
 #include <string>
 #include <iostream>
+#include <cmath>
+#include <direct.h>
 
 #include "../rapidjson/document.h"
 #include "../rapidjson/writer.h"
+#include "../rapidjson/prettywriter.h"
 #include "../rapidjson/stringbuffer.h"
 #include "../rapidjson/filereadstream.h"
 
+#define EPS 1e-9
 
 #define Configuration getObj()
 
@@ -25,10 +29,12 @@ struct Config {
     std::string fileListPath;
     std::string calibrationListPath;
     size_t localWorkSize;
-    double starSeconds;
+    double starSecondsZip;
+    double starSecondsWrite;
     float leftPercentile;
     float rightPercentile;
     std::string outputPath;
+    std::string logsPath;
     int algorithm;
 
 };

@@ -14,6 +14,7 @@
 #include <fstream>
 
 #include "../Time/Time.h"
+#include "../Config/Config.h"
 
 
 #define LOGGER(...) LOG(__FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
@@ -21,7 +22,6 @@
 using namespace std;
 
 class Logger {
-    const string default_logging_directory = "loggs";
     string _filename;
 
     vector<string> storage;

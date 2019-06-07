@@ -5,15 +5,108 @@
 #include "MetricsContainer.h"
 
 
-void MetricsContainer::write_header(storageEntry * entry, vector<metrics *> &found_metrics) {
-    string file_path = entry->filesListItem->filepath + ".processed";
+void MetricsContainer::write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, double star_start, double MJD_start) {
+    ofstream out(file_path, ios::binary);
 
-    ofstream out(file_path);
+    if (!out.good()){
+        throw logic_error("error during writing header of output file: " + file_path);
+    }
 
-    out << "numpar\t" << 4 << endl;
-    out << "npoints\t" << found_metrics.size() << endl;
-    out << "MJD_begin\t" << setprecision(16) << entry->filesListItem->time_JD << endl;
-    out << "nbands\t" << entry->filesListItem->nbands << endl;
+    DataHeader source_header = entry->filesListItem->getDataReader()->getDataHeader();
+
+    Document doc;
+    auto& allocator = doc.GetAllocator();
+    doc.SetObject();
+
+    Value source_file(kObjectType);
+    source_file.AddMember("fcentral", source_header.fcentral, allocator);
+    source_file.AddMember("wb_total", source_header.wb_total, allocator);
+
+    {
+        tm &dt = source_header.begin_datetime;
+        tm_AddDefault(source_header.begin_datetime);
+        string t1 = to_string(dt.tm_mday) + "." + to_string(dt.tm_mon) + "." + to_string(dt.tm_year) + " " +
+                    to_string(dt.tm_hour) + ":" + to_string(dt.tm_min) + ":" + to_string(dt.tm_sec);
+        tm_SubDefault(source_header.begin_datetime);
+        Value t2;
+        t2.SetString(t1.c_str(), t1.size(), allocator);
+        source_file.AddMember("datetime", t2, allocator);
+    }
+
+    Value modulus(kArrayType);
+    for (auto i: source_header.modulus)
+        modulus.PushBack(i, allocator);
+
+    source_file.AddMember("modulus", modulus, allocator);
+    source_file.AddMember("tresolution", source_header.tresolution, allocator);
+    source_file.AddMember("npoints", source_header.npoints, allocator);
+    source_file.AddMember("nbands", source_header.nbands, allocator);
+
+    Value wbands(kArrayType);
+    for (auto i: source_header.wbands)
+        wbands.PushBack(i, allocator);
+
+
+    source_file.AddMember("wbands", wbands, allocator);
+
+    Value fbands(kArrayType);
+    for (auto i: source_header.fbands)
+        fbands.PushBack(i, allocator);
+
+    source_file.AddMember("fbands", fbands, allocator);
+
+    Value filename;
+    filename.SetString(entry->filesListItem->filename.c_str(), entry->filesListItem->filename.size(), allocator);
+    source_file.AddMember("source_file_start", filename, allocator);
+    source_file.AddMember("MJD_begin", entry->filesListItem->time_MJD, allocator);
+    source_file.AddMember("star_begin", entry->filesListItem->star_time_start, allocator);
+
+
+    doc.AddMember("source_file", source_file, allocator);
+
+    doc.AddMember("star_start", star_start, allocator);
+    doc.AddMember("MJD_start", MJD_start, allocator);
+    doc.AddMember("npoints_zipped", found_metrics.size(), allocator);
+    doc.AddMember("zipped_point_tresolution", Configuration.starSecondsZip, allocator);
+    doc.AddMember("fileDuration_in_star_seconds", Configuration.starSecondsWrite, allocator);
+    doc.AddMember("leftPercentile", Configuration.leftPercentile, allocator);
+    doc.AddMember("rightPercentile", Configuration.rightPercentile, allocator);
+
+    Value metrics(kArrayType);
+    vector<string> metrics_strings = { "min", "max", "max_ind", "average", "median", "variance", "variance_bounded" };
+    for (auto &i: metrics_strings) {
+        Value t;
+        t.SetString(i.c_str(), i.size(), allocator);
+        metrics.PushBack(t, allocator);
+    }
+    doc.AddMember("metrics", metrics, allocator);
+
+    {
+        Value reserved;
+        string reserved_s = "1111111111111111111111111111111111111111";
+
+        reserved.SetString(reserved_s.c_str(), reserved_s.size(), allocator);
+        doc.AddMember("reserved1", reserved, allocator);
+        reserved.SetString(reserved_s.c_str(), reserved_s.size(), allocator);
+        doc.AddMember("reserved2", reserved, allocator);
+        reserved.SetString(reserved_s.c_str(), reserved_s.size(), allocator);
+        doc.AddMember("reserved3", reserved, allocator);
+        reserved.SetString(reserved_s.c_str(), reserved_s.size(), allocator);
+        doc.AddMember("reserved4", reserved, allocator);
+        reserved.SetString(reserved_s.c_str(), reserved_s.size(), allocator);
+        doc.AddMember("reserved5", reserved, allocator);
+    }
+
+    StringBuffer buffer;
+    PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    const std::string& str = buffer.GetString();
+    //std::cout << str << std::endl;
+
+    int json_size = str.size();
+    out.write(reinterpret_cast<const char *>(&json_size), sizeof(json_size));
+    out << str;
 
     out.close();
 }
@@ -43,7 +136,7 @@ float *MetricsContainer::prepare_buffer(storageEntry * entry, vector<metrics *> 
 MetricsContainer::~MetricsContainer() {
     for (auto it = storage.begin(); it != storage.end(); ++it)
         for (auto it2 = it->storage.begin(); it2 != it->storage.end(); ++it2)
-            delete[] it2->second;
+            delete[] it2->metrics_;
 }
 
 storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListItem){
@@ -60,15 +153,15 @@ storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListIte
 void MetricsContainer::flush() {
 
     storageEntry * found = nullptr;
+    double found_time_start_star;
+    double found_time_start_MJD;
     vector<metrics *> found_metrics;
     double time_last_found_metric;
 
-    vector<pair<vector<pair<double, metrics *> >*, vector<pair<double, metrics *> >::iterator> > iterators_to_erase;
+    vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > iterators_to_erase;
 
     for (auto it = storage.begin(); it != storage.end(); ++it) {
         storageEntry &curr_storageEntry = *it;
-
-        double starSeconds = curr_storageEntry.filesListItem->getDataReader()->get_starSeconds_timeChunk_dur();
 
         if (curr_storageEntry.storage.empty())
             continue;
@@ -77,22 +170,22 @@ void MetricsContainer::flush() {
             iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, curr_storageEntry.storage.begin()));
 
         for (auto it2 = curr_storageEntry.storage.begin(); it2 != curr_storageEntry.storage.end();) {
-            double time = it2->first;
+            double starTime = it2->starTime_;
 
             double tmp;
 
-            if (found != nullptr && modf(time / 3600, &tmp) > EPS) { // 2. adding metrics
-                double diff = it2->first - time_last_found_metric;
+            if (found != nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) > EPS) { // 2. adding metrics
+                double diff = starTime - time_last_found_metric;
                 if (diff < 0)
                     diff += 86400;
-                if (abs(diff - starSeconds) > EPS)
-                    throw logic_error("a gap is more than starSeconds from config");
+                if (abs(diff - Configuration.starSecondsZip) > EPS)
+                    throw logic_error("a gap is more than starSecondsZip from config");
 
-                found_metrics.push_back(it2->second);
-                time_last_found_metric = it2->first;
+                found_metrics.push_back(it2->metrics_);
+                time_last_found_metric = starTime;
             }
-            else if (found != nullptr && modf(time / 3600, &tmp) < EPS) { // 3. found end
-                saveFound(found, found_metrics);
+            else if (found != nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 3. found end
+                saveFound(found, found_metrics, found_time_start_star, found_time_start_MJD);
                 found_metrics.clear();
                 found = nullptr;
 
@@ -108,10 +201,12 @@ void MetricsContainer::flush() {
                 it2 = curr_storageEntry.storage.begin();
                 continue;
             }
-            if (found == nullptr && modf(time / 3600, &tmp) < EPS) { // 1. found start
+            if (found == nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 1. found start
                 found = it.base();
-                time_last_found_metric = it2->first;
-                found_metrics.push_back(it2->second);
+                found_time_start_star = starTime;
+                found_time_start_MJD = it2->MJD_time_;
+                time_last_found_metric = starTime;
+                found_metrics.push_back(it2->metrics_);
                 iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, it2));
             }
 
@@ -124,9 +219,11 @@ void MetricsContainer::flush() {
 }
 
 
-void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_metrics) {
-    string path = entry->filesListItem->filepath + ".processed";
-    write_header(entry, found_metrics);
+void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_metrics, double star_start, double MJD_start) {
+    auto item = entry->filesListItem;
+
+    string path = Configuration.outputPath + "\\" + entry->filesListItem->filename + "_" + to_string(star_start / 3600) + ".processed";
+    write_header(path, entry, found_metrics, star_start, MJD_start);
 
     int buffer_size;
     float * buffer_to_write = prepare_buffer(entry, found_metrics, &buffer_size);

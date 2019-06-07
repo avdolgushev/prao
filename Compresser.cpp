@@ -14,20 +14,20 @@ void Compresser::run() {
     DataReader *reader, *readerNext;
 
     in >> *item;
-    reader = item->getDataReader(Configuration.starSeconds);
+    reader = item->getDataReader(Configuration.starSecondsZip);
     reader->setCalibrationData(storage);
     reader->AlignByStarTimeChunk();
     auto *data_reordered_buffer = new float[reader->getNeedBufferSize()];
 
     int remains = 0, offset = 0, count;
-    double curr_starTime_seconds;
+    double curr_starTime_seconds, curr_MJD;
     MetricsContainer container;
     storageEntry *metrics_storage;
     while(reader != nullptr) {
         in >> *item_next;
 
         if (item_next->good()) {
-            readerNext = item_next->getDataReader(Configuration.starSeconds);
+            readerNext = item_next->getDataReader(Configuration.starSecondsZip);
             readerNext->setCalibrationData(storage);
             reader->set_MJD_next(readerNext->get_MJD_begin());
         } else
@@ -38,7 +38,7 @@ void Compresser::run() {
         if (remains){
             count = offset + reader->readNextPoints(data_reordered_buffer, remains, offset);
             MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
-            metrics_storage->addNewMetrics(curr_starTime_seconds, calculator.calc());
+            metrics_storage->addNewMetrics(curr_MJD, curr_starTime_seconds, calculator.calc());
             remains = 0;
         }
 
@@ -46,14 +46,16 @@ void Compresser::run() {
 
         while (!reader->eof()) {
             curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
+            curr_MJD = reader->get_MJD_current();
             count = reader->readNextPoints(data_reordered_buffer);
             MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
             start = clock();
-            metrics_storage->addNewMetrics(curr_starTime_seconds, calculator.calc());
+            metrics_storage->addNewMetrics(curr_MJD, curr_starTime_seconds, calculator.calc());
             time_processing_curr += clock() - start;
         }
 
         curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
+        curr_MJD = reader->get_MJD_current();
         offset = reader->readRemainder(data_reordered_buffer, &remains);
         cout << "processing time: " << time_processing_curr / (float) CLOCKS_PER_SEC << endl;
 

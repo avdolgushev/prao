@@ -1,10 +1,12 @@
 {
   "localWorkSize": 2,
-  "fileListPath": "../resources/big2/filesListBig.txt",
-  "calibrationListPath": "../resources/big2/bigCalibrationParts.txt",
-  "starSeconds": 10.0,
+  "fileListPath": "../resources/big2/filesListPart.txt",
+  "calibrationListPath": "../resources/big2/CalibrationDataParts.txt",
+  "starSecondsZip": 10.0,
+  "starSecondsWrite": 1800.0,
   "leftPercentile": 0.02,
   "rightPercentile": 0.7,
   "outputPath": "output",
+  "logsPath": "logs",
   "algorithm": 1
 }

@@ -20,8 +20,7 @@ void Logger::writer(){
 
 
 Logger::Logger() {
-    _mkdir(default_logging_directory.c_str());
-    _filename = default_logging_directory + '/' + getCurrentDateTimeStr() + ".log";
+    _filename = Configuration.logsPath + '/' + getCurrentDateTimeStr() + ".log";
 }
 
 Logger::~Logger() {
