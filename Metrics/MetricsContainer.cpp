@@ -5,7 +5,7 @@
 #include "MetricsContainer.h"
 
 
-void MetricsContainer::write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, double star_start, double MJD_start) {
+void MetricsContainer::write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start) {
     ofstream out(file_path, ios::binary);
 
     if (!out.good()){
@@ -64,8 +64,8 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
 
     doc.AddMember("source_file", source_file, allocator);
 
-    doc.AddMember("star_start", star_start, allocator);
-    doc.AddMember("MJD_start", MJD_start, allocator);
+    doc.AddMember("star_start", found_start.starTime_, allocator);
+    doc.AddMember("MJD_start", found_start.MJD_time_, allocator);
     doc.AddMember("npoints_zipped", found_metrics.size(), allocator);
     doc.AddMember("zipped_point_tresolution", Configuration.starSecondsZip, allocator);
     doc.AddMember("fileDuration_in_star_seconds", Configuration.starSecondsWrite, allocator);
@@ -112,7 +112,7 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
 }
 
 
-float *MetricsContainer::prepare_buffer(storageEntry * entry, vector<metrics *> &found_metrics, int *out_array_size) {
+float *MetricsContainer::prepare_buffer(storageEntry * entry, vector<metrics *> &found_metrics, int *out_array_size, metrics_with_time &found_start) {
     int point_size = entry->filesListItem->getDataReader()->getPointSize();
     int storage_size = found_metrics.size();
     *out_array_size = metrics::metric_count * point_size * storage_size;
@@ -153,8 +153,9 @@ storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListIte
 void MetricsContainer::flush() {
 
     storageEntry * found = nullptr;
-    double found_time_start_star;
-    double found_time_start_MJD;
+
+    metrics_with_time found_start;
+
     vector<metrics *> found_metrics;
     double time_last_found_metric;
 
@@ -181,11 +182,17 @@ void MetricsContainer::flush() {
                 if (abs(diff - Configuration.starSecondsZip) > EPS)
                     throw logic_error("a gap is more than starSecondsZip from config");
 
+                metrics * curr = it2->metrics_;
+                int curr_read = it2->count_read_points, read_first = found_start.count_read_points, n = curr_storageEntry.filesListItem->getDataReader()->getPointSize();
+                for (int i = 0; i < n; ++i)
+                    curr[i].max_ind += curr_read - read_first;
+
+
                 found_metrics.push_back(it2->metrics_);
                 time_last_found_metric = starTime;
             }
             else if (found != nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 3. found end
-                saveFound(found, found_metrics, found_time_start_star, found_time_start_MJD);
+                saveFound(found, found_metrics, found_start);
                 found_metrics.clear();
                 found = nullptr;
 
@@ -203,8 +210,7 @@ void MetricsContainer::flush() {
             }
             if (found == nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 1. found start
                 found = it.base();
-                found_time_start_star = starTime;
-                found_time_start_MJD = it2->MJD_time_;
+                found_start = *it2;
                 time_last_found_metric = starTime;
                 found_metrics.push_back(it2->metrics_);
                 iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, it2));
@@ -219,14 +225,12 @@ void MetricsContainer::flush() {
 }
 
 
-void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_metrics, double star_start, double MJD_start) {
-    auto item = entry->filesListItem;
-
-    string path = Configuration.outputPath + "\\" + entry->filesListItem->filename + "_" + to_string(star_start / 3600) + ".processed";
-    write_header(path, entry, found_metrics, star_start, MJD_start);
+void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start) {
+    string path = Configuration.outputPath + "\\" + entry->filesListItem->filename + "_" + to_string(found_start.starTime_ / 3600) + ".processed";
+    write_header(path, entry, found_metrics, found_start);
 
     int buffer_size;
-    float * buffer_to_write = prepare_buffer(entry, found_metrics, &buffer_size);
+    float * buffer_to_write = prepare_buffer(entry, found_metrics, &buffer_size, found_start);
 
     FILE *f = fopen(path.c_str(), "ab");
     fwrite(buffer_to_write, 4, buffer_size, f);
