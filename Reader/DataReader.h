@@ -87,7 +87,7 @@ public:
     }
     /// \breif get size of array that should be passed to read points for the specified in ctor time
     inline int getNeedBufferSize(){
-        return floats_per_point * int(timeChunk_duration_sun / dataHeader.tresolution + 1);
+        return floats_per_point * int(timeChunk_duration_sun / dataHeader.tresolution + 1) * 2;
     }
 
     /// \breif get count of floats in point regard to file time resolution
