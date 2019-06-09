@@ -146,9 +146,11 @@ float *MetricsContainer::prepare_buffer(storageEntry * entry, vector<metrics *> 
 
 
 MetricsContainer::~MetricsContainer() {
-    for (auto it = storage.begin(); it != storage.end(); ++it)
+    for (auto it = storage.begin(); it != storage.end(); ++it) {
         for (auto it2 = it->storage.begin(); it2 != it->storage.end(); ++it2)
             delete[] it2->metrics_;
+        delete it->filesListItem;
+    }
 }
 
 

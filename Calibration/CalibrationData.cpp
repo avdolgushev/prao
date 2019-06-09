@@ -49,13 +49,13 @@ CalibrationData::CalibrationData(string &data1, string &data2) {
 
 CalibrationData::~CalibrationData() {
     if (small != nullptr)
-        delete(small);
+        delete small;
     if (big != nullptr)
-        delete(big);
+        delete big;
     if (one_kelvin != nullptr)
-        delete(one_kelvin);
+        delete[] one_kelvin;
     if (zero_level != nullptr)
-        delete(zero_level);
+        delete[] zero_level;
     small = big = nullptr;
     one_kelvin = zero_level = nullptr;
 }

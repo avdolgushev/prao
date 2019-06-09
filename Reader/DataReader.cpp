@@ -40,7 +40,7 @@ void DataReader::close() {
 
     if (buffer_second != nullptr){
         reading_thread->join();
-        delete(buffer_second);
+        delete[] buffer_second;
         buffer_second = nullptr;
         delete reading_thread;
         reading_thread = nullptr;
