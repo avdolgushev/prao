@@ -121,12 +121,12 @@ int DataReader::readNextPoints(float *point, int count, int offset) {
     return readNextPointsInternal(point, count, offset, count);
 }
 
-int DataReader::readRemainder(float *point, int *remainder){
+int DataReader::readRemainder(float *point, int *remainder, int *from_this_file){
     int points_to_read_int = getCountPointsToNextAlignment(true);
-    int from_this_file = int(ideal_points - count_read_points);
-    *remainder = points_to_read_int - from_this_file;
+    *from_this_file = int(ideal_points - count_read_points);
+    *remainder = points_to_read_int - *from_this_file;
 
-    int count = readNextPointsInternal(point, from_this_file, 0, from_this_file);
+    int count = readNextPointsInternal(point, *from_this_file, 0, *from_this_file);
     close();
     return count;
 }

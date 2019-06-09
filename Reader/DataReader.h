@@ -105,10 +105,6 @@ public:
         return dataHeader.MJD_begin;
     }
 
-    inline int get_count_read_points(){
-        return count_read_points;
-    }
-
     /// \breif get date start in MJD format
     inline double get_MJD_current(){
         return dataHeader.MJD_begin + (count_read_points * dataHeader.tresolution) / 86400;
@@ -130,7 +126,7 @@ public:
     int readNextPoints(float *to);
     int readNextPoints(float *to, int count, int offset = 0);
 
-    int readRemainder(float *to, int *remainder);
+    int readRemainder(float *to, int *remainder, int *from_this_file);
 };
 
 #endif //PRAO_COMPRESSER_DATEREADER_H

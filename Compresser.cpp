@@ -41,9 +41,9 @@ void Compresser::run() {
 
         int start, time_processing_curr = 0;
         if (remains){
-            count = offset + reader->readNextPoints(data_reordered_buffer, remains, offset);
-            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
-            metrics_storage->addNewMetrics(curr_MJD, curr_starTime_seconds, count_read_points, calculator.calc());
+            count = reader->readNextPoints(data_reordered_buffer, remains, offset);
+            MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count + offset, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
+            metrics_storage->addNewMetrics(curr_MJD, curr_starTime_seconds, count + count_read_points, calculator.calc());
             remains = 0;
         }
 
@@ -52,18 +52,16 @@ void Compresser::run() {
         while (!reader->eof()) {
             curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
             curr_MJD = reader->get_MJD_current();
-            count_read_points = reader->get_count_read_points();
             count = reader->readNextPoints(data_reordered_buffer);
             MetricsCalculator calculator = MetricsCalculator(context, data_reordered_buffer, reader->getPointSize(), count, Configuration.localWorkSize, Configuration.leftPercentile, Configuration.rightPercentile);
             start = clock();
-            metrics_storage->addNewMetrics(curr_MJD, curr_starTime_seconds, count_read_points, calculator.calc());
+            metrics_storage->addNewMetrics(curr_MJD, curr_starTime_seconds, count, calculator.calc());
             time_processing_curr += clock() - start;
         }
 
         curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
         curr_MJD = reader->get_MJD_current();
-        count_read_points = reader->get_count_read_points();
-        offset = reader->readRemainder(data_reordered_buffer, &remains);
+        offset = reader->readRemainder(data_reordered_buffer, &remains, &count_read_points);
         cout << "processing time: " << time_processing_curr / (float) CLOCKS_PER_SEC << endl;
 
         container.flush();

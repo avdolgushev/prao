@@ -188,9 +188,10 @@ void MetricsContainer::flush() {
                     throw logic_error("a gap is more than starSecondsZip from config");
 
                 metrics * curr = it2->metrics_;
-                int curr_read = it2->count_read_points, read_first = found_start.count_read_points, n = curr_storageEntry.filesListItem->getDataReader()->getPointSize();
+                int n = curr_storageEntry.filesListItem->getDataReader()->getPointSize();
                 for (int i = 0; i < n; ++i)
-                    curr[i].max_ind += curr_read - read_first;
+                    curr[i].max_ind += found_start.count_read_points;
+                found_start.count_read_points += it2->count_read_points;
 
 
                 found_metrics.push_back(it2->metrics_);
