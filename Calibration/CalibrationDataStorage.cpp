@@ -46,15 +46,15 @@ int CalibrationDataStorage::add_items(string &data) {
 
 
 int CalibrationDataStorage::add_items_from_file(string &path) {
-    LOGGER(">> Add to calibration signals storage signals from file (path: %s)", path.c_str());
+//    LOGGER(">> Add to calibration signals storage signals from file (path: %s)", path.c_str());
 
     ifstream stream(path, ios::binary);
     if (!stream.good()) {
-        LOGGER("%s %s", path.c_str(), "file not exists");
+//        LOGGER("%s %s", path.c_str(), "file not exists");
         throw logic_error(path + " file not exists");
     }
     int count = add_items_from_stream(stream);
-    LOGGER("<< Added %d calibration signals to calibration signals storage", count);
+//    LOGGER("<< Added %d calibration signals to calibration signals storage", count);
     return count;
 }
 

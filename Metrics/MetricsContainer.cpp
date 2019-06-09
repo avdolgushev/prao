@@ -146,9 +146,6 @@ float *MetricsContainer::prepare_buffer(storageEntry * entry, vector<metrics *> 
 
 
 MetricsContainer::~MetricsContainer() {
-    for (auto it = storage.begin(); it != storage.end(); ++it)
-        for (auto it2 = it->storage.begin(); it2 != it->storage.end(); ++it2)
-            delete[] it2->metrics_;
 }
 
 
@@ -205,8 +202,6 @@ void MetricsContainer::flush() {
                     auto start = iterators_to_erase[0].second;
                     auto end = iterators_to_erase[1].second;
 
-                    for (auto curr = start; curr != end; ++curr)
-                        delete[] curr->metrics_;
 
                     iterators_to_erase[0].first->erase(start, end);
 
@@ -243,5 +238,4 @@ void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_
     fwrite(buffer_to_write, 4, buffer_size, f);
 
     fclose(f);
-    delete[] buffer_to_write;
 }

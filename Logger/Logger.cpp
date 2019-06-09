@@ -25,8 +25,6 @@ Logger::Logger() {
 
 Logger::~Logger() {
     stop_logging();
-    if (writer_thread != nullptr)
-        delete(writer_thread);
 }
 
 void Logger::LOG(string log_string, string file, string func, int line){

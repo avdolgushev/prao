@@ -17,7 +17,7 @@
 #include "../Config/Config.h"
 
 
-#define LOGGER(...) LOG(__FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+//#define LOGGER(...) LOG(__FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 using namespace std;
 
