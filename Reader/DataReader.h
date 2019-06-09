@@ -72,6 +72,7 @@ public:
     /// \param starSeconds_timeChunk_dur duration in star seconds of how many points will be read by call to readNextPoints
     explicit DataReader(string filepath, double starSeconds_timeChunk_dur, double star_time_start);
     ~DataReader();
+    void close();
 
     void set_MJD_next(double next_MJD);
     double getCurrStarTimeSeconds();

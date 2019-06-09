@@ -12,12 +12,12 @@ DataReader* FilesListItem::getDataReader(double starSeconds_timeChunk_dur){
 }
 
 
-//FilesListItem::~FilesListItem(){
-//    if (reader != nullptr) {
-//        delete reader;
-//        reader = nullptr;
-//    }
-//}
+FilesListItem::~FilesListItem(){
+    if (reader != nullptr) {
+        delete reader;
+        reader = nullptr;
+    }
+}
 
 bool FilesListItem::good() {
     return nbands != 0;

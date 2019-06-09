@@ -5,6 +5,18 @@
 #include "MetricsContainer.h"
 
 
+storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListItem){
+    if (filesListItem == nullptr)
+        throw logic_error("MetricsContainer::addNewFilesListItem filesListItem == nullptr");
+    storageEntry entry;
+    entry.filesListItem = filesListItem;
+    storage.push_back(entry);
+
+    return &storage[storage.size() - 1];
+}
+
+
+
 void MetricsContainer::write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start) {
     ofstream out(file_path, ios::binary);
 
@@ -139,15 +151,6 @@ MetricsContainer::~MetricsContainer() {
             delete[] it2->metrics_;
 }
 
-storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListItem){
-    if (filesListItem == nullptr)
-        throw logic_error("MetricsContainer::addNewFilesListItem filesListItem == nullptr");
-    storageEntry entry;
-    entry.filesListItem = filesListItem;
-    storage.push_back(entry);
-
-    return &storage[storage.size() - 1];
-}
 
 
 void MetricsContainer::flush() {
@@ -201,6 +204,10 @@ void MetricsContainer::flush() {
                 while(!iterators_to_erase.empty()){ // removing from iterators
                     auto start = iterators_to_erase[0].second;
                     auto end = iterators_to_erase[1].second;
+
+                    for (auto curr = start; curr != end; ++curr)
+                        delete[] curr->metrics_;
+
                     iterators_to_erase[0].first->erase(start, end);
 
                     iterators_to_erase.erase(iterators_to_erase.begin(), iterators_to_erase.begin() + 2);

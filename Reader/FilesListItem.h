@@ -26,10 +26,13 @@ struct FilesListItem{
 
 
     DataReader* getDataReader(double starSeconds_timeChunk_dur);
+
     inline DataReader* getDataReader(){
         return reader;
     }
-//    ~FilesListItem();
+
+    ~FilesListItem();
+
     bool good();
 
 

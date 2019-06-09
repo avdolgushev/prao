@@ -33,8 +33,10 @@ void Compresser::run() {
             readerNext = item_next->getDataReader(Configuration.starSecondsZip);
             readerNext->setCalibrationData(storage);
             reader->set_MJD_next(readerNext->get_MJD_begin());
-        } else
+        } else {
             readerNext = nullptr;
+            delete item_next;
+        }
 
 
         int start, time_processing_curr = 0;
@@ -71,6 +73,9 @@ void Compresser::run() {
         item = item_next;
         item_next = new FilesListItem();
     }
+
+    delete storage;
+    in.close();
 }
 
 

@@ -4,6 +4,13 @@
 
 #include "CalibrationDataStorage.h"
 
+CalibrationDataStorage::~CalibrationDataStorage() {
+    while (!st.empty()){
+        CalibrationData *curr = *st.begin();
+        st.erase(st.begin());
+        delete curr;
+    }
+}
 
 int CalibrationDataStorage::add_items_from_stream(istream &stream) {
     int count = 0;

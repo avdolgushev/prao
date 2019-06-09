@@ -26,11 +26,18 @@ DataReader::DataReader(string path, double starSeconds_timeChunk_dur, double sta
     //LOGGER("<< Created reader of raw data (floats per chunk: %f)", points_per_chunk);
 }
 
-DataReader::~DataReader() {
-    if (buffer != nullptr) {
-        delete(buffer);
-        buffer = nullptr;
+template<class T>
+void deleter(T *& pointer){
+    if (pointer != nullptr){
+        delete[] pointer;
+        pointer = nullptr;
     }
+}
+
+
+void DataReader::close() {
+    deleter(buffer);
+
     if (buffer_second != nullptr){
         reading_thread->join();
         delete(buffer_second);
@@ -40,13 +47,17 @@ DataReader::~DataReader() {
     }
     in.close();
 
-    delete[] calibration_on_k_left;
-    delete[] calibration_on_k_right;
-    delete[] calibration_zr_left;
-    delete[] calibration_zr_right;
-    delete[] curr_on_k;
-    delete[] curr_zr;
+    deleter(calibration_on_k_left);
+    deleter(calibration_on_k_right);
+    deleter(calibration_zr_left);
+    deleter(calibration_zr_right);
+    deleter(curr_on_k);
+    deleter(curr_zr);
+}
 
+
+DataReader::~DataReader() {
+    close();
     LOGGER("<< Raw data reader was destroyed. Total time: reading - %f, calibrating - %f, copying - %f", time_reading / (float) CLOCKS_PER_SEC,
            time_calibrating / (float) CLOCKS_PER_SEC, time_copying / (float) CLOCKS_PER_SEC);
 }
@@ -115,7 +126,9 @@ int DataReader::readRemainder(float *point, int *remainder){
     int from_this_file = int(ideal_points - count_read_points);
     *remainder = points_to_read_int - from_this_file;
 
-    return readNextPointsInternal(point, from_this_file, 0, from_this_file);
+    int count = readNextPointsInternal(point, from_this_file, 0, from_this_file);
+    close();
+    return count;
 }
 
 int DataReader::readNextPointsInternal(float *point, int full_count, int offset, int local_count){

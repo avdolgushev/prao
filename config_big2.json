@@ -6,7 +6,7 @@
   "starSecondsWrite": 1800.0,
   "leftPercentile": 0.02,
   "rightPercentile": 0.7,
-  "outputPath": "output",
+  "outputPath": "output/big",
   "logsPath": "logs",
   "algorithm": 1
 }

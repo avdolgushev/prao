@@ -20,6 +20,7 @@ private:
 
 public:
     CalibrationDataStorage() = default;
+    ~CalibrationDataStorage();
 
     /// array of non-parsed calibration signals in text
     explicit CalibrationDataStorage(string &data);
