@@ -42,7 +42,7 @@ def load(path):
     nfloats = len(as_float_array)
 
     struct = {
-		'metric_num': [i for i in range(nmetrics)] * (npoints * nrays * nmetrics),
+		'metric_num': [i for i in range(nmetrics)] * (npoints * nrays * nbands),
 		'band_num': __join([[i] * nmetrics for i in range(nbands)]) * (npoints * nrays),
 		'ray_num': __join([[i] * nbands * nmetrics for i in range(nrays)]) * npoints,
 		'ts': __join([[i] * (nmetrics * nrays * nbands) for i in range(npoints)]),
