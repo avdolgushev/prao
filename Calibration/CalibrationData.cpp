@@ -6,7 +6,7 @@
 
 
 void CalibrationData::calculateCoefs() {
-    LOGGER(">> Calculating calibration coefs (one kelvin & zero level)");
+//    LOGGER(">> Calculating calibration coefs (one kelvin & zero level)");
     int size = small->data.size();
     float n, Tpr;
     float *sm = small->data.data(), *bg = big->data.data();
@@ -19,13 +19,13 @@ void CalibrationData::calculateCoefs() {
 
     small->data.clear();
     big->data.clear();
-    LOGGER("<< Calculating calibration coefs (one kelvin & zero level)");
+//    LOGGER("<< Calculating calibration coefs (one kelvin & zero level)");
 }
 
 CalibrationData::CalibrationData(double time_MJD) : MJD(time_MJD) { }
 
 CalibrationData::CalibrationData(string &data1, string &data2) {
-    LOGGER(">> Parsing big & small calibration signals");
+//    LOGGER(">> Parsing big & small calibration signals");
     small = new CalibrationDataInput(data1);
     big = new CalibrationDataInput(data2);
 
@@ -33,7 +33,7 @@ CalibrationData::CalibrationData(string &data1, string &data2) {
         swap(small, big);
 
     if (small->MJD != big->MJD) {
-        LOGGER("<< ERROR. small signal's MJD != big signal's MJD");
+//        LOGGER("<< ERROR. small signal's MJD != big signal's MJD");
         throw logic_error("small->MJD != big->MJD");
     }
 
@@ -44,7 +44,7 @@ CalibrationData::CalibrationData(string &data1, string &data2) {
     zero_level = new double[size];
 
     calculateCoefs();
-    LOGGER("<< Parsing big & small calibration signals");
+//    LOGGER("<< Parsing big & small calibration signals");
 }
 
 CalibrationData::~CalibrationData() {

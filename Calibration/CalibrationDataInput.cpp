@@ -26,10 +26,10 @@ CalibrationDataInput::CalibrationDataInput(string &input) {
     } while (curr != -1);
 
     if (data.size() != 7 * 48 && data.size() != 33 * 48) {
-        LOGGER("<< ERROR. Calibration data parsing: count floats expected (7*48 or 33 * 48) - found %d", data.size());
+//        LOGGER("<< ERROR. Calibration data parsing: count floats expected (7*48 or 33 * 48) - found %d", data.size());
         throw logic_error("CalibrationDataInput read floats err");
     }
 
     data.shrink_to_fit();
-    LOGGER("<< Calibration data parsed. Count floats: %d\t Temp: %d\t MJD: %f", data.size(), temperature, MJD);
+//    LOGGER("<< Calibration data parsed. Count floats: %d\t Temp: %d\t MJD: %f", data.size(), temperature, MJD);
 }

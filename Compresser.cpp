@@ -35,7 +35,6 @@ void Compresser::run() {
             reader->set_MJD_next(readerNext->get_MJD_begin());
         } else {
             readerNext = nullptr;
-            delete item_next;
         }
 
 
@@ -78,7 +77,7 @@ void Compresser::run() {
 
 
 CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_calibration) {
-    LOGGER(">> Creating storage of calibration signals from file %s", path_calibration.c_str());
+//    LOGGER(">> Creating storage of calibration signals from file %s", path_calibration.c_str());
     float start = 0, diff = 0;
     auto *storage = new CalibrationDataStorage();
 
@@ -86,7 +85,7 @@ CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_
     storage->add_items_from_file(path_calibration);
     diff = (clock() - start) / CLOCKS_PER_SEC;
     cout << "reading calibration file took " << diff << " sec" << endl;
-    LOGGER("<< Created storage of calibration signals from file %s took %f seconds", path_calibration.c_str(), diff);
+//    LOGGER("<< Created storage of calibration signals from file %s took %f seconds", path_calibration.c_str(), diff);
     return storage;
 }
 

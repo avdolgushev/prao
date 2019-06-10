@@ -6,7 +6,6 @@
 #define PRAO_COMPRESSER_DATEREADER_H
 
 #include "DataHeader.h"
-#include "../Point/Point.h"
 #include "../Calibration/CalibrationDataStorage.h"
 
 #include "../Logger/Logger.h"

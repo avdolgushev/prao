@@ -14,7 +14,6 @@ DataReader* FilesListItem::getDataReader(double starSeconds_timeChunk_dur){
 
 FilesListItem::~FilesListItem(){
     if (reader != nullptr) {
-        delete reader;
         reader = nullptr;
     }
 }
@@ -25,7 +24,7 @@ bool FilesListItem::good() {
 
 
 istream &operator>>(istream & in, FilesListItem& dt){
-    LOGGER(">> Read file description from files list");
+//    LOGGER(">> Read file description from files list");
 
     string tmp;
     getline(in, tmp, ';');
@@ -56,6 +55,6 @@ istream &operator>>(istream & in, FilesListItem& dt){
 
     dt.reader = nullptr;
 
-    LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_MJD);
+//    LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_MJD);
     return in;
 }
