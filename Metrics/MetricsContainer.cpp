@@ -124,7 +124,23 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
 }
 
 
-float *MetricsContainer::prepare_buffer(storageEntry * entry, vector<metrics *> &found_metrics, int *out_array_size, metrics_with_time &found_start) {
+float *MetricsContainer::prepare_buffer_time_ray_band_metric(storageEntry *entry, vector<metrics *> &found_metrics, int *out_array_size, metrics_with_time &found_start) {
+    int point_size = entry->filesListItem->getDataReader()->getPointSize();
+    int points_count = found_metrics.size();
+    *out_array_size = metrics::metric_count * point_size * points_count;
+    auto buffer = new float[*out_array_size];
+
+    metrics ** data = found_metrics.data();
+
+    for (int time = 0; time < points_count; ++time)
+        memcpy(&buffer[time * point_size * metrics::metric_count], data[time], point_size * metrics::metric_count * 4);
+
+    return buffer;
+}
+
+
+float *MetricsContainer::prepare_metric_unk(storageEntry *entry, vector<metrics *> &found_metrics, int *out_array_size,
+                                            metrics_with_time &found_start) {
     int point_size = entry->filesListItem->getDataReader()->getPointSize();
     int storage_size = found_metrics.size();
     *out_array_size = metrics::metric_count * point_size * storage_size;
@@ -240,7 +256,7 @@ void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_
     write_header(path, entry, found_metrics, found_start);
 
     int buffer_size;
-    float * buffer_to_write = prepare_buffer(entry, found_metrics, &buffer_size, found_start);
+    float * buffer_to_write = prepare_buffer_time_ray_band_metric(entry, found_metrics, &buffer_size, found_start);
 
     FILE *f = fopen(path.c_str(), "ab");
     fwrite(buffer_to_write, 4, buffer_size, f);

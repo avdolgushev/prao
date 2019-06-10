@@ -37,7 +37,10 @@ struct storageEntry{
 class MetricsContainer {
     vector<storageEntry> storage = vector<storageEntry>();
 
-    float * prepare_buffer(storageEntry * entry, vector<metrics *> &found_metrics, int *out_array_size, metrics_with_time &found_start);
+    float * prepare_buffer_time_ray_band_metric(storageEntry *entry, vector<metrics *> &found_metrics,
+                                                int *out_array_size, metrics_with_time &found_start);
+    float * prepare_metric_unk(storageEntry *entry, vector<metrics *> &found_metrics, int *out_array_size,
+                               metrics_with_time &found_start);
     void write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start);
     void saveFound(storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start);
 
