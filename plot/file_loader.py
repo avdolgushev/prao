@@ -5,7 +5,10 @@ import os
 import time
 import logging
 import pandas as pd
+from struct import unpack
+import json
 
+#logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
@@ -14,48 +17,36 @@ def __join(list_lists):
 
 
 def load(path):
-    with open(path, 'rb') as fp:
-        data = fp.read(1024)
-        numpar = int(data.split(b'\r\n')[0].split(b'\t')[1])
-        logger.debug('numpar = %d', numpar)
 
-        header_length = sum([len(data.split(b'\r\n')[i]) + 2 for i in range(numpar)])
-        logger.debug('header_length = %d', header_length)
-
-    time_started = time.time()
     as_float_array = array.array('f')
 
-    file_length = os.path.getsize(path) - header_length
-
-    logger.debug('File size w/o header is {} B'.format(file_length))
-
     with open(path, 'rb') as fp:
-        header_raw = fp.read(header_length)
-        _header = dict(map(lambda x: (x.split(b'\t')[0], x.split(b'\t')[1]), filter(len, header_raw.split(b'\r\n'))))
-        header = {x.decode("utf-8") : _header[x] for x in _header}
-        logging.debug(header)
-        header['npoints'] = int(header['npoints'])
-        header['nmetrics'] = 7
-        header['nrays'] = 48
-        header['nbands'] = int(header['nbands']) + 1
-        #header['nbands'] = 33
-        logger.debug(header)
-        fp.seek(header_length)
+        header_length = unpack('I', fp.read(4))[0]
+        logger.debug('header_length = %d', header_length)
+        header = json.loads(fp.read(header_length))
+
+        logging.debug(str(header))
+        file_length = os.path.getsize(path) - header_length - 4
+        logger.debug('File size w/o header is {} B'.format(file_length))
         as_float_array.fromfile(fp, file_length // 4)
 
-    npoints = header['npoints']
-    nmetrics = header['nmetrics']
-    nrays = header['nrays']
-    nbands = header['nbands']
+    time_started = time.time()
+
+
+
+    npoints = header['npoints_zipped']
+    nmetrics = len(header['metrics'])
+    nrays = len(header['source_file']['modulus']) * 8
+    nbands = header['source_file']['nbands'] + 1
 
     nfloats = len(as_float_array)
 
     struct = {
-        'ts': list(range(npoints)) * (nfloats // npoints),
-        'ray_num': __join([[i] * npoints for i in range(nrays)]) * (nfloats // (nrays * npoints)),
-        'metric_num': __join([[i] * (npoints * nrays) for i in range(nmetrics)]) * (nfloats // (nrays * npoints * nmetrics)),
-        'band_num': __join([[i] * (npoints * nrays * nmetrics) for i in range(nbands)]),
-
+		'metric_num': [i for i in range(nmetrics)] * (npoints * nrays * nmetrics),
+		'band_num': __join([[i] * nmetrics for i in range(nbands)]) * (npoints * nrays),
+		'ray_num': __join([[i] * nbands * nmetrics for i in range(nrays)]) * npoints,
+		'ts': __join([[i] * (nmetrics * nrays * nbands) for i in range(npoints)]),
+		
         'value': as_float_array
     }
 

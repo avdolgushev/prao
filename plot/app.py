@@ -19,7 +19,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-metric_names = ['min', 'max', 'max_ind', 'average', 'median', 'variance', 'variance_bounded', 'left_bound', 'right_bound']
+metric_names = ['min', 'max', 'max_ind', 'average', 'median', 'variance', 'variance_bounded']
 
 runtime = {}
 runtime_lock = Lock()
