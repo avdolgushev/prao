@@ -112,8 +112,8 @@ __kernel void getMetrics(__global float* inp, __global struct metrics * output, 
 	av_bounded /= count;
 	av_sqt_bounded /= count;
 	
-	double D = (av_sqt - av * av);
-	double D_bounded = (av_sqt_bounded - av_bounded * av_bounded);
+	double D = sqrt(av_sqt - av * av);
+	double D_bounded = sqrt(av_sqt_bounded - av_bounded * av_bounded);
 	
 	curr_out->min = (float)min; 
 	curr_out->max = (float)max;
