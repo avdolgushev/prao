@@ -19,25 +19,27 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-metric_names = ['min', 'max', 'max_ind', 'average', 'median', 'variance', 'variance_bounded']
-
 runtime = {}
 runtime_lock = Lock()
 
 
 def make_slider(param_name, slider_id):
     idx = '{}_num'.format(param_name)
+    logging.info('idx = %s' % idx)
 
     if param_name == 'metric':
-        marks = {str(x): metric_names[x] for x in runtime['df'][idx].unique()}
-    else:
-        marks = {str(x): str(x) for x in runtime['df'][idx].unique()}
+        marks = {str(x): runtime['metrics_obj'].header['metrics'][x] for x in range(len(runtime['metrics_obj'].header['metrics']))}
+    elif param_name == 'ray':
+        marks = {str(x): str(x) for x in range(runtime['metrics_obj'].header['nrays'])}
+    elif param_name == 'band':
+        marks = {str(x): str(x) for x in range(runtime['metrics_obj'].header['source_file']['nbands'] + 1)}
 
+    logging.info(runtime['metrics_obj'].df[idx].unique())
     return dcc.Slider(
         id='{}-slider-{}'.format(param_name, slider_id),
-        min=runtime['df'][idx].min(),
-        max=runtime['df'][idx].max(),
-        value=runtime['df'][idx].min(),
+        min=runtime['metrics_obj'].df[idx].min(),
+        max=runtime['metrics_obj'].df[idx].max(),
+        value=runtime['metrics_obj'].df[idx].min(),
         marks=marks
     )
 
@@ -53,11 +55,17 @@ def update_file(selected_file):
 
     runtime['file'] = int(selected_file)
     logger.debug('Loading %s', os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
-    runtime['df'] = file_metrics(os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']]))).df
+    runtime['metrics_obj'] = file_metrics(os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+def seconds_to_time(seconds):
+	hours = seconds // 3600
+	seconds -= 3600 * hours
+	minutes = seconds // 60
+	seconds -= 60 * minutes
+	return "{}:{}:{}".format(hours, minutes, seconds)
 
 @click.command('run')
 @click.argument('dir_path', type=str)
@@ -98,15 +106,17 @@ def run(dir_path):
 
         html.H2('Rays by Band & Metric'),
         dcc.Graph(id='graph-band-metric'),
-        make_slider('band', 3),
+        html.Br(),
+        make_slider('band', 1),
         html.Br(),
         make_centered_p('band'),
-        make_slider('metric', 3),
+        make_slider('metric', 1),
         html.Br(),
         make_centered_p('metric'),
 
         html.H2('Bands by Ray & Metric'),
         dcc.Graph(id='graph-ray-metric'),
+        html.Br(),
         make_slider('ray', 2),
         html.Br(),
         make_centered_p('ray'),
@@ -116,33 +126,37 @@ def run(dir_path):
 
         html.H2('Metrics by Band & Ray'),
         dcc.Graph(id='graph-band-ray'),
-        make_slider('band', 1),
+        html.Br(),
+        make_slider('band', 3),
         html.Br(),
         make_centered_p('band'),
-        make_slider('ray', 1),
+        make_slider('ray', 3),
         html.Br(),
         make_centered_p('ray'),
 
     ], style={'margin-left': '50px', 'margin-right': '50px'})
 
     @app.callback(
-        dash.dependencies.Output('graph-band-ray', 'figure'),
-        [dash.dependencies.Input('ray-slider-1', 'value'),
-         dash.dependencies.Input('band-slider-1', 'value'),
+        dash.dependencies.Output('graph-band-metric', 'figure'),
+        [dash.dependencies.Input('band-slider-1', 'value'),
+         dash.dependencies.Input('metric-slider-1', 'value'),
          dash.dependencies.Input('file-changer', 'value'),
          ])
-    def update_figure_1(selected_ray, selected_band, selected_file):
-        logger.debug('enter update_figure_1(%s, %s, %s)', selected_ray, selected_band, selected_file)
+    def update_figure_1(selected_band, selected_metric, selected_file):
+        logger.debug('enter update_figure_3(%s, %s, %s)', selected_band, selected_metric, selected_file)
         if int(selected_file) != runtime['file']:
             with runtime_lock:
                 update_file(selected_file)
 
-        filtered_df = runtime['df'][(runtime['df']['ray_num'] == selected_ray) & (runtime['df']['band_num'] == selected_band)]
+        df = runtime['metrics_obj'].df
+        filtered_df = df[(df['band_num'] == selected_band) & (df['metric_num'] == selected_metric)]
         traces = []
-        for i in filtered_df.metric_num.unique():
-            df_by_metric = filtered_df[filtered_df['metric_num'] == i]
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header['fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = [seconds_to_time(i) for i in x_]
+        for i in filtered_df.ray_num.unique():
+            df_by_metric = filtered_df[filtered_df['ray_num'] == i]
             traces.append(go.Scatter(
-                x=df_by_metric['ts'],
+                x=x_,
                 y=df_by_metric['value'],
                 x0=0,
                 y0=0,
@@ -152,15 +166,15 @@ def run(dir_path):
                     'size': 15,
                     'line': {'width': 0.5, 'color': 'white'}
                 },
-                name=metric_names[i],
+                name=str(i),
             ))
 
-        logger.debug('leave update_figure_1(%s, %s, %s)', selected_ray, selected_band, selected_file)
+        logging.debug('leave update_figure_3(%s, %s, %s)', selected_band, selected_metric, selected_file)
         return {
             'data': traces,
             'layout': go.Layout(
-                xaxis={'range': [0, 360]},
-                yaxis={'range': [0, 1000]},
+                xaxis={'range': [x_[0], x_[-1]]},
+                yaxis={'range': [0, 2500]},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
                 legend={'x': 0, 'y': 1},
                 hovermode='closest'
@@ -178,13 +192,16 @@ def run(dir_path):
         if int(selected_file) != runtime['file']:
             with runtime_lock:
                 update_file(selected_file)
-
-        filtered_df = runtime['df'][(runtime['df']['ray_num'] == selected_ray) & (runtime['df']['metric_num'] == selected_metric)]
+        
+        df = runtime['metrics_obj'].df
+        filtered_df = df[(df['ray_num'] == selected_ray) & (df['metric_num'] == selected_metric)]
         traces = []
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header['fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = [seconds_to_time(i) for i in x_]
         for i in filtered_df.band_num.unique():
             df_by_metric = filtered_df[filtered_df['band_num'] == i]
             traces.append(go.Scatter(
-                x=df_by_metric['ts'],
+                x=x_,
                 y=df_by_metric['value'],
                 x0=0,
                 y0=0,
@@ -200,8 +217,8 @@ def run(dir_path):
         return {
             'data': traces,
             'layout': go.Layout(
-                xaxis={'range': [0, 360]},  # TODO: 360 считать по df
-                yaxis={'range': [0, 1000]},
+                xaxis={'range': [x_[0], x_[-1]]},
+                yaxis={'range': [0, 2500]},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
                 legend={'x': 0, 'y': 1},
                 hovermode='closest'
@@ -209,23 +226,26 @@ def run(dir_path):
         }
 
     @app.callback(
-        dash.dependencies.Output('graph-band-metric', 'figure'),
+        dash.dependencies.Output('graph-band-ray', 'figure'),
         [dash.dependencies.Input('band-slider-3', 'value'),
-         dash.dependencies.Input('metric-slider-3', 'value'),
+		 dash.dependencies.Input('ray-slider-3', 'value'),
          dash.dependencies.Input('file-changer', 'value'),
          ])
-    def update_figure_3(selected_band, selected_metric, selected_file):
-        logger.debug('enter update_figure_3(%s, %s, %s)', selected_band, selected_metric, selected_file)
+    def update_figure_3(selected_band, selected_ray, selected_file):
+        logger.debug('enter update_figure_1(%s, %s, %s)', selected_ray, selected_band, selected_file)
         if int(selected_file) != runtime['file']:
             with runtime_lock:
                 update_file(selected_file)
 
-        filtered_df = runtime['df'][(runtime['df']['band_num'] == selected_band) & (runtime['df']['metric_num'] == selected_metric)]
+        df = runtime['metrics_obj'].df
+        filtered_df = df[(df['ray_num'] == selected_ray) & (df['band_num'] == selected_band)]
         traces = []
-        for i in filtered_df.ray_num.unique():
-            df_by_metric = filtered_df[filtered_df['ray_num'] == i]
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header['fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = [seconds_to_time(i) for i in x_]
+        for i in filtered_df.metric_num.unique():
+            df_by_metric = filtered_df[filtered_df['metric_num'] == i]
             traces.append(go.Scatter(
-                x=df_by_metric['ts'],
+                x=x_,
                 y=df_by_metric['value'],
                 x0=0,
                 y0=0,
@@ -235,21 +255,21 @@ def run(dir_path):
                     'size': 15,
                     'line': {'width': 0.5, 'color': 'white'}
                 },
-                name=str(i),
+                name=runtime['metrics_obj'].header['metrics'][i],
             ))
 
-        logging.debug('leave update_figure_3(%s, %s, %s)', selected_band, selected_metric, selected_file)
+        logger.debug('leave update_figure_1(%s, %s, %s)', selected_ray, selected_band, selected_file)
         return {
             'data': traces,
             'layout': go.Layout(
-                xaxis={'range': [0, 360]},
-                yaxis={'range': [0, 1000]},
+                xaxis={'range': [x_[0], x_[-1]]},
+                yaxis={'range': [0, 2500]},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
                 legend={'x': 0, 'y': 1},
                 hovermode='closest'
             )
         }
-
+		
     app.run_server(debug=False)
 
 
