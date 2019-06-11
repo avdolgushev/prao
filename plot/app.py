@@ -8,7 +8,7 @@ import logging
 import os
 import click
 import glob
-from file_loader import load
+from file_loader import file_metrics
 from threading import Lock
 
 logger = logging.getLogger()
@@ -53,7 +53,7 @@ def update_file(selected_file):
 
     runtime['file'] = int(selected_file)
     logger.debug('Loading %s', os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
-    runtime['df'] = load(os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
+    runtime['df'] = file_metrics(os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']]))).df
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
