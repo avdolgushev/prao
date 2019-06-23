@@ -8,6 +8,8 @@
 
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <cmath>
 #include <direct.h>
 
@@ -24,7 +26,7 @@
 using namespace rapidjson;
 
 struct Config {
-    void readFrom(char *fileName);
+    int readFrom(char *fileName);
 
     std::string fileListPath;
     std::string calibrationListPath;

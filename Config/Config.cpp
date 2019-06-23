@@ -4,14 +4,18 @@
 
 #include "Config.h"
 
-void Config::readFrom(char *fileName) {
-    std::cout << "parsing config..." << std::endl;
-    FILE *fp = fopen(fileName, "r"); // non-Windows use "r"
-    char readBuffer[2048];
-    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+int Config::readFrom(char *fileName) {
+    std::ifstream inp(fileName);
+    if (!inp.good()){
+        std::cout << "config file not found at " << fileName <<  std::endl;
+        return 1;
+    }
+    std::stringstream buffer;
+    buffer << inp.rdbuf();
+
+    std::cout << "parsing config from " << fileName <<  std::endl;
     Document d;
-    d.ParseStream(is);
-    fclose(fp);
+    d.Parse(buffer.str().c_str());
 
     assert(d.HasMember("fileListPath"));
     assert(d.HasMember("calibrationListPath"));
@@ -47,6 +51,8 @@ void Config::readFrom(char *fileName) {
 
     _mkdir(outputPath.c_str());
     _mkdir(logsPath.c_str());
+
+    return 0;
 }
 
 Config Config_static;

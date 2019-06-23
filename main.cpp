@@ -25,8 +25,8 @@ int main(int argc, char **argv) {
         std::cout << "Not valid arguments. Use -h to get help." << std::endl;
         exit(-1);
     }
-
-    Configuration.readFrom(path_config);
+    if (Configuration.readFrom(path_config))
+        return 1;
 
     OpenCLContext context = OpenCLContext();
     context.initContext();
