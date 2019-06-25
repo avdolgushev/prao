@@ -13,14 +13,14 @@
 #include <utility>
 
 
-#include "Processing/OpenCLContext.h"
-#include "Processing/MetricsCalculator.h"
-#include "Calibration/CalibrationDataStorage.h"
-#include "Metrics/MetricsContainer.h"
-#include "Reader/FilesListItem.h"
-#include "Config/Config.h"
+#include "OpenCLContext.h"
+#include "MetricsCalculator.h"
+#include "../Calibration/CalibrationDataStorage.h"
+#include "../Metrics/MetricsContainer.h"
+#include "../Reader/FilesListItem.h"
+#include "../Config/Config.h"
 
-#include "Logger/Logger.h"
+#include "../Logger/Logger.h"
 
 class Compresser {
 

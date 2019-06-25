@@ -1,13 +1,12 @@
-#include "Calibration/test.h"
-#include "Reader/testReader.h"
-#include "Compresser.h"
-
-#include "Config/Config.h"
-using namespace std;
-
 //
 // Created by sorrow on 30.01.19.
 //
+
+#include "Processing/Compresser.h"
+#include "Config/Config.h"
+
+using namespace std;
+
 int main(int argc, char **argv) {
     const char * path_config;
     string default_config_path = "config.json";
