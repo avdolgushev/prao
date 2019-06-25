@@ -4,6 +4,24 @@
 
 #include "Config.h"
 
+static void _mkdir_rec(const char *dir) {
+    char tmp[256];
+    char *p = nullptr;
+    size_t len;
+
+    snprintf(tmp, sizeof(tmp), "%s", dir);
+    len = strlen(tmp);
+    if(tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+    for(p = tmp + 1; *p; p++)
+        if(*p == '/') {
+            *p = 0;
+            _mkdir(tmp);
+            *p = '/';
+        }
+    _mkdir(tmp);
+}
+
 int Config::readFrom(const char *fileName) {
     std::ifstream inp(fileName);
     if (!inp.good()){
@@ -49,8 +67,8 @@ int Config::readFrom(const char *fileName) {
     if (localWorkSize < 0 || localWorkSize > 1024)
         throw std::logic_error("localWorkSize < 0 || localWorkSize > 1024");
 
-    _mkdir(outputPath.c_str());
-    _mkdir(logsPath.c_str());
+    _mkdir_rec(outputPath.c_str());
+    _mkdir_rec(logsPath.c_str());
 
     return 0;
 }
