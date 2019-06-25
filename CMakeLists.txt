@@ -38,3 +38,10 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${ResourcesIn}/examples/
         ${ResourcesOut}/Examples/)
+
+# coping graph builder to output
+add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/plot/
+        ${CMAKE_BINARY_DIR}/plot/)
