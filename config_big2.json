@@ -8,5 +8,5 @@
   "rightPercentile": 0.7,
   "outputPath": "output/big",
   "logsPath": "logs",
-  "algorithm": 1
+  "kernelPath": "../resources/Kernels/nth_element.cl"
 }

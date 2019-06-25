@@ -1,15 +1,8 @@
-#include <memory>
-
 //
 // Created by sorrow on 18.02.19.
 //
 
-#include <iostream>
-#include <fstream>
 #include "OpenCLContext.h"
-#include <memory>
-#include <map>
-
 
 cl_kernel OpenCLContext::compile_kernel(const char filename[], const char kernelName[]) {
     cl_program program = nullptr;
@@ -48,13 +41,13 @@ cl_kernel OpenCLContext::compile_kernel(const char filename[], const char kernel
     if (ret == -11) {
         // Determine the size of the log
         size_t log_size;
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
 
         // Allocate memory for the log
-        char *log = (char *) malloc(log_size);
+        auto log = (char *) malloc(log_size);
 
         // Get the log
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, log, nullptr);
 
         // Print the log
         printf("%s\n", log);
@@ -74,13 +67,6 @@ cl_kernel OpenCLContext::compile_kernel(const char filename[], const char kernel
     return kernel;
 }
 
-
-void OpenCLContext::initMetricsKernels(int algorithm) {
-    if (algorithm == 1)
-        workingKernel = compile_kernel("../Processing/Kernels/nth_element.cl", "getMetrics");
-    else
-        workingKernel = compile_kernel("../Processing/Kernels/heapSort.cl", "getMetrics");
-}
 
 OpenCLContext &OpenCLContext::operator=(const OpenCLContext &oclContext) {
     if (this == &oclContext)
@@ -113,6 +99,8 @@ void OpenCLContext::initContext() {
                   std::endl;
         exit(-1);
     }
+
+    workingKernel = compile_kernel(Configuration.kernelPath.c_str(), "getMetrics");
 }
 
 
@@ -144,10 +132,10 @@ void OpenCLContext::scanDevices() {
             for (int z = 0; z < ret_num_devices; z++) {
                 globalDeviceCount++;
                 deviceIdMap[globalDeviceCount] = devices[z];
-                char *vendor = NULL;
-                clGetDeviceInfo(devices[z], CL_DEVICE_NAME, NULL, NULL, &size);
+                char *vendor = nullptr;
+                clGetDeviceInfo(devices[z], CL_DEVICE_NAME, 0, nullptr, &size);
                 vendor = (char *) malloc(sizeof(char) * size);
-                clGetDeviceInfo(devices[z], CL_DEVICE_NAME, size, vendor, NULL);
+                clGetDeviceInfo(devices[z], CL_DEVICE_NAME, size, vendor, nullptr);
                 std::cout << globalDeviceCount << ") " << vendor << std::endl;
             }
         }

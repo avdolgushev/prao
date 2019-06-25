@@ -26,7 +26,7 @@
 using namespace rapidjson;
 
 struct Config {
-    int readFrom(char *fileName);
+    int readFrom(const char *fileName);
 
     std::string fileListPath;
     std::string calibrationListPath;
@@ -37,7 +37,7 @@ struct Config {
     float rightPercentile;
     std::string outputPath;
     std::string logsPath;
-    int algorithm;
+    std::string kernelPath;
 
 };
 

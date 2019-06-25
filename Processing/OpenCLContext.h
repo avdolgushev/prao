@@ -2,6 +2,16 @@
 // Created by sorrow on 18.02.19.
 //
 /* this is opencl sandbox */
+
+#include <memory>
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <memory>
+#include <map>
+
+#include "../Config/Config.h"
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -53,10 +63,6 @@ private:
     void scanDevices();
 
 public:
-    /**
-     * сортирует ядра подсчета метрик
-     */
-    void initMetricsKernels(int algorithm);
 
     /** инициализирует контекст и все остальное */
     void initContext();

@@ -4,7 +4,7 @@
 
 #include "Config.h"
 
-int Config::readFrom(char *fileName) {
+int Config::readFrom(const char *fileName) {
     std::ifstream inp(fileName);
     if (!inp.good()){
         std::cout << "config file not found at " << fileName <<  std::endl;
@@ -26,7 +26,7 @@ int Config::readFrom(char *fileName) {
     assert(d.HasMember("rightPercentile"));
     assert(d.HasMember("outputPath"));
     assert(d.HasMember("logsPath"));
-    assert(d.HasMember("algorithm"));
+    assert(d.HasMember("kernelPath"));
 
     this->fileListPath = d["fileListPath"].GetString();
     this->calibrationListPath = d["calibrationListPath"].GetString();
@@ -37,7 +37,7 @@ int Config::readFrom(char *fileName) {
     this->rightPercentile = d["rightPercentile"].GetFloat();
     this->outputPath = d["outputPath"].GetString();
     this->logsPath = d["logsPath"].GetString();
-    this->algorithm = d["algorithm"].GetInt();
+    this->kernelPath = d["kernelPath"].GetString();
 
     double tmp;
     if (modf(starSecondsWrite / starSecondsZip, &tmp) > EPS)

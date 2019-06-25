@@ -10,7 +10,7 @@ void Compresser::run() {
     CalibrationDataStorage *storage = readCalibrationDataStorage(Configuration.calibrationListPath);
     ifstream in(Configuration.fileListPath);
 
-    FilesListItem *item = new FilesListItem(), *item_next = new FilesListItem();
+    auto *item = new FilesListItem(), *item_next = new FilesListItem();
     DataReader *reader, *readerNext;
 
     in >> *item;
@@ -92,7 +92,6 @@ CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_
 
 Compresser::Compresser(const OpenCLContext context) {
     this->context = context;
-    this->context.initMetricsKernels(Configuration.algorithm);
 }
 
 
