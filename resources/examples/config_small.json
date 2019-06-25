@@ -1,0 +1,12 @@
+{
+  "localWorkSize": 2,
+  "fileListPath": "resources/examples/filesListSmall.txt",
+  "calibrationListPath": "resources/examples/smallCalibrationParts.txt",
+  "starSecondsZip": 10.0,
+  "starSecondsWrite": 3600.0,
+  "leftPercentile": 0.02,
+  "rightPercentile": 0.7,
+  "outputPath": "output/small",
+  "logsPath": "logs",
+  "kernelPath": "resources/Kernels/nth_element.cl"
+}

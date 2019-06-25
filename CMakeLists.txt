@@ -14,3 +14,27 @@ add_executable(prao-compresser main.cpp
         Processing/MetricsCalculator.cpp Processing/MetricsCalculator.h Processing/Processor.cpp Processing/Processor.h
         Metrics/MetricsType.h Metrics/MetricsType.cpp Compresser.cpp Compresser.h Metrics/MetricsContainer.cpp Metrics/MetricsContainer.h Config/Config.cpp Config/Config.h Logger/Logger.cpp Logger/Logger.h)
 target_link_libraries(prao-compresser OpenCL::OpenCL)
+
+
+SET (ResourcesIn ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+SET (ResourcesOut ${CMAKE_BINARY_DIR}/resources)
+
+add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${ResourcesOut}/Kernels/)
+
+# coping kernels to output
+add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${ResourcesIn}/Kernels/heapSort.cl
+        ${ResourcesIn}/Kernels/nth_element.cl
+        ${ResourcesOut}/Kernels/)
+
+# coping examples of input files to output
+add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${ResourcesIn}/examples/
+        ${ResourcesOut}/Examples/)
