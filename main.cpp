@@ -6,15 +6,14 @@
 #include "Config/Config.h"
 
 using namespace std;
-// это мой проект в котором я работаю. Допустим я нашел баг и решил сделать исправление.
-// Теперь его нужно отправить на гитхаб. Это называется Коммит
+
 int main(int argc, char **argv) {
     const char * path_config;
     string default_config_path = "config.json";
 
     std::vector<std::string> args;
     if (argc == 2 && string(argv[1]) == "-h") {
-        cout << "To provide a configuration file use -c %path_to_config. 111111111111111" << endl;
+        cout << "To provide a configuration file use -c %path_to_config." << endl;
         cout << "If configuration file was not passed, it will use the default path \"config.json\"." << endl;
         cout << "To see help message use -h." << endl;
         exit(0);
