@@ -8,6 +8,8 @@
 storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListItem){
     if (filesListItem == nullptr)
         throw logic_error("MetricsContainer::addNewFilesListItem filesListItem == nullptr");
+    dim_size = filesListItem->getDataReader()->getPointSize();
+
     storageEntry entry;
     entry.filesListItem = filesListItem;
     storage.push_back(entry);
@@ -80,7 +82,7 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
     doc.AddMember("MJD_start", found_start.MJD_time_, allocator);
     doc.AddMember("npoints_zipped", found_metrics.size(), allocator);
     doc.AddMember("zipped_point_tresolution", Configuration.starSecondsZip, allocator);
-    doc.AddMember("fileDuration_in_star_seconds", Configuration.starSecondsWrite, allocator);
+    doc.AddMember("fileDuration_in_star_seconds", Configuration.starSecondsZip * found_metrics.size(), allocator);
     doc.AddMember("leftPercentile", Configuration.leftPercentile, allocator);
     doc.AddMember("rightPercentile", Configuration.rightPercentile, allocator);
 
@@ -169,9 +171,29 @@ MetricsContainer::~MetricsContainer() {
     }
 }
 
+void MetricsContainer::delete_by_iters(vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > iterators_to_erase){
+    while(!iterators_to_erase.empty()){ // removing from iterators
+        auto start = iterators_to_erase[0].second;
+        auto end = iterators_to_erase[1].second;
 
+        for (auto curr = start; curr != end; ++curr)
+            delete[] curr->metrics_;
 
-void MetricsContainer::flush() {
+        iterators_to_erase[0].first->erase(start, end);
+
+        iterators_to_erase.erase(iterators_to_erase.begin(), iterators_to_erase.begin() + 2);
+    }
+}
+
+void MetricsContainer::fix_max_ind(vector<metrics *> &found_metrics, vector<int> &found_metrics_counts){
+    for (int i = 1; i < found_metrics.size(); ++i){
+        metrics * curr = found_metrics[i];
+        for (int j = 0; j < dim_size; ++j)
+            curr[j].max_ind += found_metrics_counts[i - 1];
+    }
+}
+
+void MetricsContainer::flush(bool save_last_not_full) {
 
     storageEntry * found = nullptr;
 
@@ -210,30 +232,15 @@ void MetricsContainer::flush() {
                 time_last_found_metric = starTime;
             }
             else if (found != nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 3. found end
-                int n = curr_storageEntry.filesListItem->getDataReader()->getPointSize();
-                for (int i = 1; i < found_metrics.size(); ++i){
-                    metrics * curr = found_metrics[i];
-                    for (int j = 0; j < n; ++j)
-                        curr[j].max_ind += found_metrics_counts[i - 1];
-                }
+                fix_max_ind(found_metrics, found_metrics_counts);
 
                 saveFound(found, found_metrics, found_start);
                 found_metrics.clear();
                 found = nullptr;
 
                 iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, it2));
+                delete_by_iters(iterators_to_erase);
 
-                while(!iterators_to_erase.empty()){ // removing from iterators
-                    auto start = iterators_to_erase[0].second;
-                    auto end = iterators_to_erase[1].second;
-
-                    for (auto curr = start; curr != end; ++curr)
-                        delete[] curr->metrics_;
-
-                    iterators_to_erase[0].first->erase(start, end);
-
-                    iterators_to_erase.erase(iterators_to_erase.begin(), iterators_to_erase.begin() + 2);
-                }
                 it2 = curr_storageEntry.storage.begin();
                 continue;
             }
@@ -251,6 +258,12 @@ void MetricsContainer::flush() {
 
         if (found != nullptr) // 4. end not found but curr vector is exceed
             iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, curr_storageEntry.storage.end()));
+    }
+
+    if (save_last_not_full){
+        fix_max_ind(found_metrics, found_metrics_counts);
+        saveFound(found, found_metrics, found_start);
+        delete_by_iters(iterators_to_erase);
     }
 }
 

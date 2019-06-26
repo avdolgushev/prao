@@ -72,6 +72,7 @@ void Compresser::run() {
         item_next = new FilesListItem();
     }
 
+    container.flush(true);
     delete storage;
     in.close();
 }
