@@ -8,7 +8,8 @@ void Logger::writer(){
     while (!logger_stopperd || !storage.empty()){
         {
             lock_guard<mutex> locker(storage_mutex);
-            ofstream file(_filename, fstream::out | fstream::app);
+            ofstream file(Configuration.logsPath + _filename, fstream::out | fstream::app);
+            bool t = file.good();
             for (string &s: storage)
                 file << s << endl;
             file.close();
@@ -20,7 +21,7 @@ void Logger::writer(){
 
 
 Logger::Logger() {
-    _filename = Configuration.logsPath + '/' + getCurrentDateTimeStr() + ".log";
+    _filename = '/' + getCurrentDateTimeStr() + ".log";
 }
 
 Logger::~Logger() {
@@ -30,7 +31,7 @@ Logger::~Logger() {
 void Logger::LOG(string log_string, string file, string func, int line){
 
     string code_debug_info = "\t(file: " + file + "\tfunction: " + func + "\tline: " + to_string(line) + ")";
-    if (true)
+    if (false)
         log_string = getCurrentDateTimeStr() + code_debug_info + ": " + log_string;
     else
         log_string = getCurrentDateTimeStr() + ": " + log_string;

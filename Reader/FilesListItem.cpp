@@ -24,8 +24,11 @@ bool FilesListItem::good() {
 
 
 istream &operator>>(istream & in, FilesListItem& dt){
-//    LOGGER(">> Read file description from files list");
-
+    LOGGER(">> Read file description from files list");
+    if (in.eof()){
+        LOGGER("<< File with files list is finished");
+        return in;
+    }
     string tmp;
     getline(in, tmp, ';');
     sscanf(tmp.c_str(), "%d-%d-%d %d:%d:%d", &dt.time_UTC.tm_year, &dt.time_UTC.tm_mon, &dt.time_UTC.tm_mday, &dt.time_UTC.tm_hour, &dt.time_UTC.tm_min, &dt.time_UTC.tm_sec);
@@ -55,6 +58,6 @@ istream &operator>>(istream & in, FilesListItem& dt){
 
     dt.reader = nullptr;
 
-//    LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_MJD);
+    LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_MJD);
     return in;
 }

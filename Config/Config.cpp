@@ -31,6 +31,7 @@ int Config::readFrom(const char *fileName) {
     std::stringstream buffer;
     buffer << inp.rdbuf();
 
+    LOGGER(">> parsing config from %s: %s", fileName, buffer.str().c_str());
     std::cout << "parsing config from " << fileName <<  std::endl;
     Document d;
     d.Parse(buffer.str().c_str());

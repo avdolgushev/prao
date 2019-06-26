@@ -112,6 +112,7 @@ void OpenCLContext::scanDevices() {
     ret = clGetPlatformIDs(ret_num_platforms, platforms, nullptr);
     int globalDeviceCount = 0;
     std::map<int, cl_device_id> deviceIdMap;
+    std::map<int, char*> deviceNameMap;
     std::cout << "choose device number" << std::endl;
     for (int i = 0; i < ret_num_platforms; ++i) {
         for (int j = 1; j < 3; j++) {
@@ -132,17 +133,18 @@ void OpenCLContext::scanDevices() {
             for (int z = 0; z < ret_num_devices; z++) {
                 globalDeviceCount++;
                 deviceIdMap[globalDeviceCount] = devices[z];
-                char *vendor = nullptr;
                 clGetDeviceInfo(devices[z], CL_DEVICE_NAME, 0, nullptr, &size);
-                vendor = (char *) malloc(sizeof(char) * size);
+                char *vendor = (char *) malloc(sizeof(char) * size);
                 clGetDeviceInfo(devices[z], CL_DEVICE_NAME, size, vendor, nullptr);
                 std::cout << globalDeviceCount << ") " << vendor << std::endl;
+                deviceNameMap[globalDeviceCount] = vendor;
             }
         }
     }
     int chosenDeviceNumber;
     std::cin >> chosenDeviceNumber;
     device = deviceIdMap[chosenDeviceNumber];
+    LOGGER("<< Selected device: %s", deviceNameMap[chosenDeviceNumber]);
 }
 
 

@@ -62,6 +62,7 @@ void Compresser::run() {
         curr_MJD = reader->get_MJD_current();
         offset = reader->readRemainder(data_reordered_buffer, &remains, &count_read_points);
         cout << "processing time: " << time_processing_curr / (float) CLOCKS_PER_SEC << endl;
+        LOGGER("<< Processing time: %f", time_processing_curr / (float) CLOCKS_PER_SEC);
 
         container.flush();
 
@@ -77,7 +78,7 @@ void Compresser::run() {
 
 
 CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_calibration) {
-//    LOGGER(">> Creating storage of calibration signals from file %s", path_calibration.c_str());
+    LOGGER(">> Creating storage of calibration signals from file %s", path_calibration.c_str());
     float start = 0, diff = 0;
     auto *storage = new CalibrationDataStorage();
 
@@ -85,7 +86,7 @@ CalibrationDataStorage *Compresser::readCalibrationDataStorage(std::string path_
     storage->add_items_from_file(path_calibration);
     diff = (clock() - start) / CLOCKS_PER_SEC;
     cout << "reading calibration file took " << diff << " sec" << endl;
-//    LOGGER("<< Created storage of calibration signals from file %s took %f seconds", path_calibration.c_str(), diff);
+    LOGGER("<< Created storage of calibration signals took %f seconds", diff);
     return storage;
 }
 

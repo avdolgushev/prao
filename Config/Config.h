@@ -19,6 +19,8 @@
 #include "../rapidjson/stringbuffer.h"
 #include "../rapidjson/filereadstream.h"
 
+#include "../Logger/Logger.h"
+
 #define EPS 1e-9
 
 #define Configuration getObj()
