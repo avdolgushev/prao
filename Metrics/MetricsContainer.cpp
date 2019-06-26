@@ -178,6 +178,7 @@ void MetricsContainer::flush() {
     metrics_with_time found_start;
 
     vector<metrics *> found_metrics;
+    vector<int> found_metrics_counts;
     double time_last_found_metric;
 
     vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > iterators_to_erase;
@@ -203,17 +204,19 @@ void MetricsContainer::flush() {
                 if (abs(diff - Configuration.starSecondsZip) > EPS)
                     throw logic_error("a gap is more than starSecondsZip from config");
 
-                metrics * curr = it2->metrics_;
-                int n = curr_storageEntry.filesListItem->getDataReader()->getPointSize();
-                for (int i = 0; i < n; ++i)
-                    curr[i].max_ind += found_start.count_read_points;
-                found_start.count_read_points += it2->count_read_points;
-
-
                 found_metrics.push_back(it2->metrics_);
+                found_metrics_counts.push_back(found_metrics_counts[found_metrics_counts.size() - 1] + it2->count_read_points);
+
                 time_last_found_metric = starTime;
             }
             else if (found != nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 3. found end
+                int n = curr_storageEntry.filesListItem->getDataReader()->getPointSize();
+                for (int i = 1; i < found_metrics.size(); ++i){
+                    metrics * curr = found_metrics[i];
+                    for (int j = 0; j < n; ++j)
+                        curr[j].max_ind += found_metrics_counts[i - 1];
+                }
+
                 saveFound(found, found_metrics, found_start);
                 found_metrics.clear();
                 found = nullptr;
@@ -239,6 +242,7 @@ void MetricsContainer::flush() {
                 found_start = *it2;
                 time_last_found_metric = starTime;
                 found_metrics.push_back(it2->metrics_);
+                found_metrics_counts.push_back(it2->count_read_points);
                 iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, it2));
             }
 
