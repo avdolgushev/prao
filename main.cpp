@@ -36,6 +36,5 @@ int main(int argc, char **argv) {
     compresser.run();
     std::cout << "elapsed time: " << (float) (clock() - tStart) / CLOCKS_PER_SEC << "s" << std::endl;
     return 0;
-
 }
 
