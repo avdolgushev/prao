@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     clock_t tStart = clock();
     compresser.run();
     std::cout << "elapsed time: " << (float) (clock() - tStart) / CLOCKS_PER_SEC << "s" << std::endl;
-    LOGGER("Full working time: %f", (float) (clock() - tStart) / CLOCKS_PER_SEC);
+    LOGGER("<< Full working time: %f", (float) (clock() - tStart) / CLOCKS_PER_SEC);
     return 0;
 }
 

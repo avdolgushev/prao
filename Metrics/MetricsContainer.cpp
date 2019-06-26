@@ -281,5 +281,5 @@ void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_
     fclose(f);
     delete[] buffer_to_write;
 
-    LOGGER("<< Saved output file to %s. MJD start: %f, star start: %f", path.c_str(), found_start.MJD_time_, found_start.starTime_);
+    LOGGER("<< Saved output file to %s. MJD start: %f, star start: %f, zipped_points: %d", path.c_str(), found_start.MJD_time_, found_start.starTime_, found_metrics.size());
 }
