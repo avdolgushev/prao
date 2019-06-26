@@ -73,7 +73,7 @@ public:
     ~DataReader();
     void close();
 
-    void set_MJD_next(double next_MJD);
+    bool set_MJD_next(double next_MJD);
     double getCurrStarTimeSeconds();
     double getCurrStarTimeSecondsAligned();
     int getCountPointsToNextAlignment(bool need_to_ceil);

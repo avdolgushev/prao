@@ -62,7 +62,7 @@ DataReader::~DataReader() {
     close();
 }
 
-void DataReader::set_MJD_next(double next_MJD) {
+bool DataReader::set_MJD_next(double next_MJD) {
     MJD_next_file = next_MJD;
 
     double MJD_duration = (next_MJD - get_MJD_begin()) * 24 * 60 * 60;
@@ -70,9 +70,11 @@ void DataReader::set_MJD_next(double next_MJD) {
     if ((ideal_points - dataHeader.npoints) * dataHeader.tresolution > timeChunk_duration_sun){
         ideal_points = dataHeader.npoints;
         LOGGER(">> ERROR. while setting next MJD: gap > timeChunk_duration_sun (curr MDJ: %f, next_MJD: %f)", get_MJD_begin(), next_MJD);
-        throw logic_error("ERROR. while setting next MJD: gap > timeChunk_duration_sun");
+        //throw logic_error("ERROR. while setting next MJD: gap > timeChunk_duration_sun");
+        return true;
     }
     LOGGER("<< Current reader (MJD: %f) was set a next reader (MJD: %f). Points available in this file %d, ideal points is %f", get_MJD_begin(), MJD_next_file, dataHeader.npoints, ideal_points);
+    return false;
 }
 
 double DataReader::getCurrStarTimeSeconds(){

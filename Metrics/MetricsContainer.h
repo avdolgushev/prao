@@ -45,7 +45,7 @@ class MetricsContainer {
                                metrics_with_time &found_start);
     void write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start);
     void saveFound(storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start);
-    void delete_by_iters(vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > iterators_to_erase);
+    void delete_by_iters(vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > &iterators_to_erase);
     void fix_max_ind(vector<metrics *> &found_metrics, vector<int> &found_metrics_counts);
 public:
     ~MetricsContainer();

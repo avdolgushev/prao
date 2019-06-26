@@ -26,14 +26,18 @@ void Compresser::run() {
 
     MetricsContainer container;
     storageEntry *metrics_storage;
+
+    bool gap;
     while(reader != nullptr) {
         in >> *item_next;
 
         if (item_next->good()) {
             readerNext = item_next->getDataReader(Configuration.starSecondsZip);
             readerNext->setCalibrationData(storage);
-            reader->set_MJD_next(readerNext->get_MJD_begin());
+            if (gap = reader->set_MJD_next(readerNext->get_MJD_begin()), gap)
+                readerNext->AlignByStarTimeChunk();
         } else {
+            gap = true;
             readerNext = nullptr;
         }
 
@@ -58,21 +62,27 @@ void Compresser::run() {
             time_processing_curr += clock() - start;
         }
 
-        curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
-        curr_MJD = reader->get_MJD_current();
-        offset = reader->readRemainder(data_reordered_buffer, &remains, &count_read_points);
+
+        if (gap) {
+            offset = 0;
+            container.flush(true);
+            container = MetricsContainer();
+        } else {
+            curr_starTime_seconds = reader->getCurrStarTimeSecondsAligned();
+            curr_MJD = reader->get_MJD_current();
+            offset = reader->readRemainder(data_reordered_buffer, &remains, &count_read_points);
+
+            container.flush();
+        }
+
         cout << "processing time: " << time_processing_curr / (float) CLOCKS_PER_SEC << endl;
         LOGGER("<< Processing time: %f", time_processing_curr / (float) CLOCKS_PER_SEC);
-
-        container.flush();
-
 
         reader = readerNext;
         item = item_next;
         item_next = new FilesListItem();
     }
 
-    container.flush(true);
     delete storage;
     in.close();
 }

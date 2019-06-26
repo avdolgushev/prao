@@ -171,7 +171,7 @@ MetricsContainer::~MetricsContainer() {
     }
 }
 
-void MetricsContainer::delete_by_iters(vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > iterators_to_erase){
+void MetricsContainer::delete_by_iters(vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > &iterators_to_erase){
     while(!iterators_to_erase.empty()){ // removing from iterators
         auto start = iterators_to_erase[0].second;
         auto end = iterators_to_erase[1].second;
