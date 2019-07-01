@@ -143,11 +143,17 @@ int DataReader::readNextPointsInternal(float *point, int full_count, int offset,
         prepareReading();
 
     int out_count = 0;
+
+    if (local_count <= 0)
+        return 0;
+
     if (count_read_points + local_count > ideal_points)
         throw logic_error("count of points is exceed");
 
     if (count_read_points + local_count > dataHeader.npoints){
         int saved = dataHeader.npoints - count_read_points;
+        if (saved < 0)
+            saved = 0;
         out_count += readNextPointsInternal(point, saved, offset, saved);
         points_before_switch_calibration -= local_count - saved;
         count_read_points += local_count - saved;
