@@ -58,6 +58,6 @@ istream &operator>>(istream & in, FilesListItem& dt){
 
     dt.reader = nullptr;
 
-    LOGGER("<< File description from files list was read (file: %s\tMJD: %f)", dt.filepath.c_str(), dt.time_MJD);
+    LOGGER("<< File description from files list was read (file: %s\tMJD: %f\tstar time: %f)", dt.filepath.c_str(), dt.time_MJD, dt.star_time_start);
     return in;
 }
