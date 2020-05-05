@@ -5,7 +5,7 @@
 #include "MetricsContainer.h"
 
 
-storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListItem){
+storageEntry *MetricsContainer::addNewFilesListItem(FilesListItem *filesListItem) {
     if (filesListItem == nullptr)
         throw logic_error("MetricsContainer::addNewFilesListItem filesListItem == nullptr");
     dim_size = filesListItem->getDataReader()->getPointSize();
@@ -18,18 +18,18 @@ storageEntry * MetricsContainer::addNewFilesListItem(FilesListItem *filesListIte
 }
 
 
-
-void MetricsContainer::write_header(string file_path, storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start) {
+void MetricsContainer::write_header(string file_path, storageEntry *entry, vector<metrics *> &found_metrics,
+                                    metrics_with_time &found_start) {
     ofstream out(file_path, ios::binary);
 
-    if (!out.good()){
+    if (!out.good()) {
         throw logic_error("error during writing header of output file: " + file_path);
     }
 
     DataHeader source_header = entry->filesListItem->getDataReader()->getDataHeader();
 
     Document doc;
-    auto& allocator = doc.GetAllocator();
+    auto &allocator = doc.GetAllocator();
     doc.SetObject();
 
     Value source_file(kObjectType);
@@ -87,7 +87,7 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
     doc.AddMember("rightPercentile", Configuration.rightPercentile, allocator);
 
     Value metrics(kArrayType);
-    vector<string> metrics_strings = { "min", "max", "max_ind", "average", "median", "variance", "variance_bounded" };
+    vector<string> metrics_strings = {"min", "max", "max_ind", "average", "median", "variance", "variance_bounded"};
     for (auto &i: metrics_strings) {
         Value t;
         t.SetString(i.c_str(), i.size(), allocator);
@@ -115,7 +115,7 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
     PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
 
-    const std::string& str = buffer.GetString();
+    const std::string &str = buffer.GetString();
     //std::cout << str << std::endl;
 
     int json_size = str.size();
@@ -126,13 +126,14 @@ void MetricsContainer::write_header(string file_path, storageEntry * entry, vect
 }
 
 
-float *MetricsContainer::prepare_buffer_time_ray_band_metric(storageEntry *entry, vector<metrics *> &found_metrics, int *out_array_size, metrics_with_time &found_start) {
+float *MetricsContainer::prepare_buffer_time_ray_band_metric(storageEntry *entry, vector<metrics *> &found_metrics,
+                                                             int *out_array_size, metrics_with_time &found_start) {
     int point_size = entry->filesListItem->getDataReader()->getPointSize();
     int points_count = found_metrics.size();
     *out_array_size = metrics::metric_count * point_size * points_count;
     auto buffer = new float[*out_array_size];
 
-    metrics ** data = found_metrics.data();
+    metrics **data = found_metrics.data();
 
     for (int time = 0; time < points_count; ++time)
         memcpy(&buffer[time * point_size * metrics::metric_count], data[time], point_size * metrics::metric_count * 4);
@@ -148,13 +149,13 @@ float *MetricsContainer::prepare_metric_unk(storageEntry *entry, vector<metrics 
     *out_array_size = metrics::metric_count * point_size * storage_size;
     auto buffer = new float[*out_array_size];
 
-    metrics ** data = found_metrics.data();
+    metrics **data = found_metrics.data();
 
-    for (int k = 0; k < metrics::metric_count; ++k){ // looping metrics
-        float * buff_curr = &buffer[k * point_size * storage_size];
-        for (int i = 0; i < storage_size; ++i){
-            for (int j = 0; j < point_size; ++j){
-                buff_curr[i + j * storage_size] = ((float*)(&data[i][j]))[k];
+    for (int k = 0; k < metrics::metric_count; ++k) { // looping metrics
+        float *buff_curr = &buffer[k * point_size * storage_size];
+        for (int i = 0; i < storage_size; ++i) {
+            for (int j = 0; j < point_size; ++j) {
+                buff_curr[i + j * storage_size] = ((float *) (&data[i][j]))[k];
             }
         }
     }
@@ -171,8 +172,9 @@ MetricsContainer::~MetricsContainer() {
     }
 }
 
-void MetricsContainer::delete_by_iters(vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > &iterators_to_erase){
-    while(!iterators_to_erase.empty()){ // removing from iterators
+void MetricsContainer::delete_by_iters(
+        vector<pair<vector<metrics_with_time> *, vector<metrics_with_time>::iterator> > &iterators_to_erase) {
+    while (!iterators_to_erase.empty()) { // removing from iterators
         auto start = iterators_to_erase[0].second;
         auto end = iterators_to_erase[1].second;
 
@@ -185,9 +187,9 @@ void MetricsContainer::delete_by_iters(vector<pair<vector<metrics_with_time>*, v
     }
 }
 
-void MetricsContainer::fix_max_ind(vector<metrics *> &found_metrics, vector<int> &found_metrics_counts){
-    for (int i = 1; i < found_metrics.size(); ++i){
-        metrics * curr = found_metrics[i];
+void MetricsContainer::fix_max_ind(vector<metrics *> &found_metrics, vector<int> &found_metrics_counts) {
+    for (int i = 1; i < found_metrics.size(); ++i) {
+        metrics *curr = found_metrics[i];
         for (int j = 0; j < dim_size; ++j)
             curr[j].max_ind += found_metrics_counts[i - 1];
     }
@@ -195,7 +197,7 @@ void MetricsContainer::fix_max_ind(vector<metrics *> &found_metrics, vector<int>
 
 void MetricsContainer::flush(bool save_last_not_full) {
 
-    storageEntry * found = nullptr;
+    storageEntry *found = nullptr;
 
     metrics_with_time found_start;
 
@@ -203,7 +205,7 @@ void MetricsContainer::flush(bool save_last_not_full) {
     vector<int> found_metrics_counts;
     double time_last_found_metric;
 
-    vector<pair<vector<metrics_with_time>*, vector<metrics_with_time>::iterator> > iterators_to_erase;
+    vector<pair<vector<metrics_with_time> *, vector<metrics_with_time>::iterator> > iterators_to_erase;
 
     for (auto it = storage.begin(); it != storage.end(); ++it) {
         storageEntry &curr_storageEntry = *it;
@@ -227,11 +229,12 @@ void MetricsContainer::flush(bool save_last_not_full) {
                     throw logic_error("a gap is more than starSecondsZip from config");
 
                 found_metrics.push_back(it2->metrics_);
-                found_metrics_counts.push_back(found_metrics_counts[found_metrics_counts.size() - 1] + it2->count_read_points);
+                found_metrics_counts.push_back(
+                        found_metrics_counts[found_metrics_counts.size() - 1] + it2->count_read_points);
 
                 time_last_found_metric = starTime;
-            }
-            else if (found != nullptr && modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 3. found end
+            } else if (found != nullptr &&
+                       modf(starTime / Configuration.starSecondsWrite, &tmp) < EPS) { // 3. found end
                 fix_max_ind(found_metrics, found_metrics_counts);
 
                 saveFound(found, found_metrics, found_start);
@@ -260,7 +263,7 @@ void MetricsContainer::flush(bool save_last_not_full) {
             iterators_to_erase.emplace_back(make_pair(&curr_storageEntry.storage, curr_storageEntry.storage.end()));
     }
 
-    if (save_last_not_full){
+    if (save_last_not_full) {
         fix_max_ind(found_metrics, found_metrics_counts);
         saveFound(found, found_metrics, found_start);
         delete_by_iters(iterators_to_erase);
@@ -268,12 +271,20 @@ void MetricsContainer::flush(bool save_last_not_full) {
 }
 
 
-void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_metrics, metrics_with_time &found_start) {
-    string path = Configuration.outputPath + "\\" + entry->filesListItem->filename + "_" + to_string(found_start.starTime_ / 3600) + ".processed";
+void
+MetricsContainer::saveFound(storageEntry *entry, vector<metrics *> &found_metrics, metrics_with_time &found_start) {
+    const char kPathSeparator =
+#ifdef _WIN32
+            '\\';
+#else
+            '/';
+#endif
+    string path = Configuration.outputPath + kPathSeparator + entry->filesListItem->filename + "_" +
+                  to_string(found_start.starTime_ / 3600) + ".processed";
     write_header(path, entry, found_metrics, found_start);
 
     int buffer_size;
-    float * buffer_to_write = prepare_buffer_time_ray_band_metric(entry, found_metrics, &buffer_size, found_start);
+    float *buffer_to_write = prepare_buffer_time_ray_band_metric(entry, found_metrics, &buffer_size, found_start);
 
     FILE *f = fopen(path.c_str(), "ab");
     fwrite(buffer_to_write, 4, buffer_size, f);
@@ -281,5 +292,6 @@ void MetricsContainer::saveFound(storageEntry * entry, vector<metrics *> &found_
     fclose(f);
     delete[] buffer_to_write;
 
-    LOGGER("<< Saved output file to %s. MJD start: %f, star start: %f, zipped_points: %d", path.c_str(), found_start.MJD_time_, found_start.starTime_, found_metrics.size());
+    LOGGER("<< Saved output file to %s. MJD start: %f, star start: %f, zipped_points: %d", path.c_str(),
+           found_start.MJD_time_, found_start.starTime_, found_metrics.size());
 }

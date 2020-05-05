@@ -4,6 +4,17 @@
 
 #include "Config.h"
 
+int make_directory(char *path) {
+    int nError = 0;
+# if defined(_WIN32)
+    nError = _mkdir(path);
+#else
+    mode_t nMode = 0733; // UNIX style permissions
+    nError = mkdir(path, nMode);
+#endif
+    return nError;
+}
+
 static void _mkdir_rec(const char *dir) {
     char tmp[256];
     char *p = nullptr;
@@ -11,28 +22,30 @@ static void _mkdir_rec(const char *dir) {
 
     snprintf(tmp, sizeof(tmp), "%s", dir);
     len = strlen(tmp);
-    if(tmp[len - 1] == '/')
+    if (tmp[len - 1] == '/')
         tmp[len - 1] = 0;
-    for(p = tmp + 1; *p; p++)
-        if(*p == '/') {
+    for (p = tmp + 1; *p; p++)
+        if (*p == '/') {
             *p = 0;
-            _mkdir(tmp);
+            make_directory(tmp);
+
             *p = '/';
         }
-    _mkdir(tmp);
+    make_directory(tmp);
 }
+
 
 int Config::readFrom(const char *fileName) {
     std::ifstream inp(fileName);
-    if (!inp.good()){
-        std::cout << "config file not found at " << fileName <<  std::endl;
+    if (!inp.good()) {
+        std::cout << "config file not found at " << fileName << std::endl;
         return 1;
     }
     std::stringstream buffer;
     buffer << inp.rdbuf();
 
     LOGGER(">> parsing config from %s: %s", fileName, buffer.str().c_str());
-    std::cout << "parsing config from " << fileName <<  std::endl;
+    std::cout << "parsing config from " << fileName << std::endl;
     Document d;
     d.Parse(buffer.str().c_str());
 
@@ -75,6 +88,7 @@ int Config::readFrom(const char *fileName) {
 }
 
 Config Config_static;
-Config & getObj() {
+
+Config &getObj() {
     return Config_static;
 }

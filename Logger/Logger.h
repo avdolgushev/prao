@@ -7,7 +7,11 @@
 
 #include <string>
 #include <vector>
-#include <direct.h>
+# if defined(_WIN32)
+#include <direct.h> // only for windows
+#else
+#include <sys/stat.h> // only for unix
+# endif
 #include <cstdarg>
 #include <thread>
 #include <mutex>

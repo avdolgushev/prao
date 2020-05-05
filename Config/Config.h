@@ -11,7 +11,12 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
-#include <direct.h>
+
+# if defined(_WIN32)
+#include <direct.h> // only for windows
+#else
+#include <sys/stat.h> // only for unix
+# endif
 
 #include "../rapidjson/document.h"
 #include "../rapidjson/writer.h"
