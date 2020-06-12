@@ -31,8 +31,12 @@ def make_slider(param_name, slider_id):
         metrics = list(runtime['metrics_obj'].header['metrics'])
         marks = {str(x): metrics[x] for x in range(len(metrics))}
     elif param_name == 'ray':
-        marks = {str(x): "{:.2f}".format(rays_gradient[str(x)])
-                 for x in range(runtime['metrics_obj'].header['nrays'])}
+        if runtime['metrics_obj'].header['isnorth']:
+            marks = {str(x): "{:.2f}".format(rays_gradient_north[str(x)])
+                     for x in range(runtime['metrics_obj'].header['nrays'])}
+        elif not runtime['metrics_obj'].header['isnorth']:
+            marks = {str(x): "{:.2f}".format(rays_gradient_south[str(x)])
+                     for x in range(runtime['metrics_obj'].header['nrays'])}
     elif param_name == 'band':
         fbands = runtime['metrics_obj'].header['source_file']['fbands']
         marks = {str(i): "{:.2f}MHz".format(fbands[i]) for i in range(len(fbands))}
@@ -162,7 +166,10 @@ def run(dir_path):
             runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
                 'fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
         x_ = [seconds_to_time(i) for i in x_]
-        filtered_df['ray_num'] = filtered_df['ray_num'].apply(lambda ray: rays_gradient[str(ray)])
+        if runtime['metrics_obj'].header['isnorth']:
+            filtered_df['ray_num'] = filtered_df['ray_num'].apply(lambda ray: rays_gradient_north[str(ray)])
+        elif not runtime['metrics_obj'].header['isnorth']:
+            filtered_df['ray_num'] = filtered_df['ray_num'].apply(lambda ray: rays_gradient_south[str(ray)])
         for ray_degree in filtered_df.ray_num.unique():
             df_by_metric = filtered_df[filtered_df['ray_num'] == ray_degree]
             traces.append(go.Scatter(
@@ -297,14 +304,23 @@ def run(dir_path):
 Inclination of every ray in degrees
 (idk how to calculate it)
 """
-rays_gradient = {'0': 42.13, '1': 41.72, '2': 41.31, '3': 40.89, '4': 40.47, '5': 40.06,
-                 '6': 39.64, '7': 39.23, '8': 38.79, '9': 38.38, '10': 37.95, '11': 37.54,
-                 '12': 37.11, '13': 37.69, '14': 36.26, '15': 35.85, '16': 35.40, '17': 34.97,
-                 '18': 34.54, '19': 34.12, '20': 33.69, '21': 33.25, '22': 32.82, '23': 32.38,
-                 '24': 31.94, '25': 31.5, '26': 31.06, '27': 30.61, '28': 30.17, '29': 29.73,
-                 '30': 29.29, '31': 28.84, '32': 28.37, '33': 27.92, '34': 27.47, '35': 27.01,
-                 '36': 26.56, '37': 26.1, '38': 25.64, '39': 25.18, '40': 24.7, '41': 24.23,
-                 '42': 23.76, '43': 23.29, '44': 22.81, '45': 22.34, '46': 21.86, '47': 21.38}
+rays_gradient_north = {'0': 42.13, '1': 41.72, '2': 41.31, '3': 40.89, '4': 40.47, '5': 40.06,
+                       '6': 39.64, '7': 39.23, '8': 38.79, '9': 38.38, '10': 37.95, '11': 37.54,
+                       '12': 37.11, '13': 37.69, '14': 36.26, '15': 35.85, '16': 35.40, '17': 34.97,
+                       '18': 34.54, '19': 34.12, '20': 33.69, '21': 33.25, '22': 32.82, '23': 32.38,
+                       '24': 31.94, '25': 31.5, '26': 31.06, '27': 30.61, '28': 30.17, '29': 29.73,
+                       '30': 29.29, '31': 28.84, '32': 28.37, '33': 27.92, '34': 27.47, '35': 27.01,
+                       '36': 26.56, '37': 26.1, '38': 25.64, '39': 25.18, '40': 24.7, '41': 24.23,
+                       '42': 23.76, '43': 23.29, '44': 22.81, '45': 22.34, '46': 21.86, '47': 21.38}
+
+rays_gradient_south = {'0': 20.8, '1': 20.4, '2': 19.9, '3': 19.4, '4': 18.9, '5': 18.4,
+                       '6': 17.9, '7': 17.4, '8': 16.9, '9': 16.4, '10': 15.8, '11': 15.3,
+                       '12': 14.8, '13': 14.3, '14': 13.7, '15': 13.2, '16': 12.6, '17': 12.1,
+                       '18': 11.5, '19': 11.0, '20': 10.4, '21': 9.8, '22': 9.3, '23': 8.7,
+                       '24': 8.1, '25': 7.5, '26': 6.9, '27': 6.3, '28': 5.7, '29': 5.0,
+                       '30': 4.4, '31': 3.8, '32': 3.1, '33': 2.5, '34': 1.8, '35': 1.1,
+                       '36': 0.4, '37': -0.3, '38': -1.0, '39': -1.7, '40': -2.5, '41': -3.2,
+                       '42': -4.0, '43': -4.8, '44': -5.6, '45': -6.5, '46': -7.3, '47': -8.2}
 
 if __name__ == '__main__':
     run()

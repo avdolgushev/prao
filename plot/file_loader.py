@@ -43,6 +43,11 @@ class file_metrics:
             nrays = self.header['nrays']
             nbands = self.header['source_file']['nbands'] + 1
 
+            if "N1" in self.header['source_file']['source_file_start']:
+                self.header['isnorth'] = True
+            elif "N2" in self.header['source_file']['source_file_start']:
+                self.header['isnorth'] = False
+
 
             time_started = time.time()
             struct = {
