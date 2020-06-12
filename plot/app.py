@@ -28,13 +28,16 @@ def make_slider(param_name, slider_id):
     logging.info('idx = %s' % idx)
 
     if param_name == 'metric':
-        marks = {str(x): runtime['metrics_obj'].header['metrics'][x] for x in range(len(runtime['metrics_obj'].header['metrics']))}
+        metrics = list(runtime['metrics_obj'].header['metrics'])
+        marks = {str(x): metrics[x] for x in range(len(metrics))}
     elif param_name == 'ray':
-        marks = {str(x): str(x) for x in range(runtime['metrics_obj'].header['nrays'])}
+        marks = {str(x): "{:.2f}".format(rays_gradient[str(x)])
+                 for x in range(runtime['metrics_obj'].header['nrays'])}
     elif param_name == 'band':
-        marks = {str(x): str(x) for x in range(runtime['metrics_obj'].header['source_file']['nbands'] + 1)}
+        fbands = runtime['metrics_obj'].header['source_file']['fbands']
+        marks = {str(i): "{:.2f}MHz".format(fbands[i]) for i in range(len(fbands))}
+        marks[str(len(fbands))] = "General"
 
-    logging.info(runtime['metrics_obj'].df[idx].unique())
     return dcc.Slider(
         id='{}-slider-{}'.format(param_name, slider_id),
         min=runtime['metrics_obj'].df[idx].min(),
@@ -55,17 +58,20 @@ def update_file(selected_file):
 
     runtime['file'] = int(selected_file)
     logger.debug('Loading %s', os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
-    runtime['metrics_obj'] = file_metrics(os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
+    runtime['metrics_obj'] = file_metrics(
+        os.path.expanduser(os.path.join(runtime['dir_path'], runtime['files'][runtime['file']])))
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+
 def seconds_to_time(seconds):
-	hours = seconds // 3600
-	seconds -= 3600 * hours
-	minutes = seconds // 60
-	seconds -= 60 * minutes
-	return "{}:{}:{}".format(hours, minutes, seconds)
+    hours = seconds // 3600
+    seconds -= 3600 * hours
+    minutes = seconds // 60
+    seconds -= 60 * minutes
+    return "{}:{}:{}".format(hours, minutes, seconds)
+
 
 @click.command('run')
 @click.argument('dir_path', type=str)
@@ -143,18 +149,22 @@ def run(dir_path):
          dash.dependencies.Input('file-changer', 'value'),
          ])
     def update_figure_1(selected_band, selected_metric, selected_file):
-        logger.debug('enter update_figure_3(%s, %s, %s)', selected_band, selected_metric, selected_file)
+        logger.debug('enter update_figure_1(%s, %s, %s)', selected_band, selected_metric, selected_file)
         if int(selected_file) != runtime['file']:
             with runtime_lock:
                 update_file(selected_file)
 
         df = runtime['metrics_obj'].df
         filtered_df = df[(df['band_num'] == selected_band) & (df['metric_num'] == selected_metric)]
+        logging.debug("filtered df is %s\n", filtered_df.head(10))
         traces = []
-        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header['fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(
+            runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
+                'fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
         x_ = [seconds_to_time(i) for i in x_]
-        for i in filtered_df.ray_num.unique():
-            df_by_metric = filtered_df[filtered_df['ray_num'] == i]
+        filtered_df['ray_num'] = filtered_df['ray_num'].apply(lambda ray: rays_gradient[str(ray)])
+        for ray_degree in filtered_df.ray_num.unique():
+            df_by_metric = filtered_df[filtered_df['ray_num'] == ray_degree]
             traces.append(go.Scatter(
                 x=x_,
                 y=df_by_metric['value'],
@@ -166,10 +176,10 @@ def run(dir_path):
                     'size': 15,
                     'line': {'width': 0.5, 'color': 'white'}
                 },
-                name=str(i),
+                name=str(ray_degree),
             ))
 
-        logging.debug('leave update_figure_3(%s, %s, %s)', selected_band, selected_metric, selected_file)
+        logging.debug('leave update_figure_1(%s, %s, %s)', selected_band, selected_metric, selected_file)
         return {
             'data': traces,
             'layout': go.Layout(
@@ -192,12 +202,19 @@ def run(dir_path):
         if int(selected_file) != runtime['file']:
             with runtime_lock:
                 update_file(selected_file)
-        
+
         df = runtime['metrics_obj'].df
         filtered_df = df[(df['ray_num'] == selected_ray) & (df['metric_num'] == selected_metric)]
         traces = []
-        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header['fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(
+            runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
+                'fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
         x_ = [seconds_to_time(i) for i in x_]
+        fbands = runtime['metrics_obj'].header['source_file']['fbands']
+        logging.debug("fbands are %s", fbands)
+        fbands = ["{:.2f}MHz".format(x) for x in fbands]
+        fbands.append("General")
+        filtered_df['band_num'] = filtered_df['band_num'].apply(lambda band_num: fbands[band_num])
         for i in filtered_df.band_num.unique():
             df_by_metric = filtered_df[filtered_df['band_num'] == i]
             traces.append(go.Scatter(
@@ -228,11 +245,11 @@ def run(dir_path):
     @app.callback(
         dash.dependencies.Output('graph-band-ray', 'figure'),
         [dash.dependencies.Input('band-slider-3', 'value'),
-		 dash.dependencies.Input('ray-slider-3', 'value'),
+         dash.dependencies.Input('ray-slider-3', 'value'),
          dash.dependencies.Input('file-changer', 'value'),
          ])
     def update_figure_3(selected_band, selected_ray, selected_file):
-        logger.debug('enter update_figure_1(%s, %s, %s)', selected_ray, selected_band, selected_file)
+        logger.debug('enter update_figure_3(%s, %s, %s)', selected_ray, selected_band, selected_file)
         if int(selected_file) != runtime['file']:
             with runtime_lock:
                 update_file(selected_file)
@@ -240,7 +257,9 @@ def run(dir_path):
         df = runtime['metrics_obj'].df
         filtered_df = df[(df['ray_num'] == selected_ray) & (df['band_num'] == selected_band)]
         traces = []
-        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header['fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(
+            runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
+                'fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
         x_ = [seconds_to_time(i) for i in x_]
         for i in filtered_df.metric_num.unique():
             df_by_metric = filtered_df[filtered_df['metric_num'] == i]
@@ -258,7 +277,7 @@ def run(dir_path):
                 name=runtime['metrics_obj'].header['metrics'][i],
             ))
 
-        logger.debug('leave update_figure_1(%s, %s, %s)', selected_ray, selected_band, selected_file)
+        logger.debug('leave update_figure_3(%s, %s, %s)', selected_ray, selected_band, selected_file)
         return {
             'data': traces,
             'layout': go.Layout(
@@ -269,9 +288,23 @@ def run(dir_path):
                 hovermode='closest'
             )
         }
-		
+
     app.run_server(debug=False)
 
+
+"""
+Склонения каждого луча в градусах
+Inclination of every ray in degrees
+(idk how to calculate it)
+"""
+rays_gradient = {'0': 42.13, '1': 41.72, '2': 41.31, '3': 40.89, '4': 40.47, '5': 40.06,
+                 '6': 39.64, '7': 39.23, '8': 38.79, '9': 38.38, '10': 37.95, '11': 37.54,
+                 '12': 37.11, '13': 37.69, '14': 36.26, '15': 35.85, '16': 35.40, '17': 34.97,
+                 '18': 34.54, '19': 34.12, '20': 33.69, '21': 33.25, '22': 32.82, '23': 32.38,
+                 '24': 31.94, '25': 31.5, '26': 31.06, '27': 30.61, '28': 30.17, '29': 29.73,
+                 '30': 29.29, '31': 28.84, '32': 28.37, '33': 27.92, '34': 27.47, '35': 27.01,
+                 '36': 26.56, '37': 26.1, '38': 25.64, '39': 25.18, '40': 24.7, '41': 24.23,
+                 '42': 23.76, '43': 23.29, '44': 22.81, '45': 22.34, '46': 21.86, '47': 21.38}
 
 if __name__ == '__main__':
     run()
