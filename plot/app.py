@@ -196,7 +196,8 @@ def run(dir_path):
                 y=df_by_metric['value'],
                 x0=0,
                 y0=0,
-                mode='lines',
+                mode='lines+text',
+                text=[ray_degree],
                 opacity=0.7,
                 marker={
                     'size': 15,
@@ -210,10 +211,16 @@ def run(dir_path):
             'data': traces,
             'layout': go.Layout(
                 xaxis={'range': [x_[0], x_[-1]]},
-                yaxis={'range': [0, 2500]},
+                yaxis={'range': [0, 2500], 'autorange': True},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                legend={'x': 0, 'y': 1},
-                hovermode='closest'
+                hovermode='closest',
+                legend=dict(
+                    yanchor="top",
+                    xanchor="right",
+                    orientation="h",
+                    x=1,
+                    y=1.3
+                )
             )
         }
 
@@ -249,7 +256,7 @@ def run(dir_path):
 
         for ray_degree in normalized_df.ray_num.unique():
             minvalue = normalized_df[normalized_df['ray_num'] == ray_degree]['value'].min()
-            normalized_df.loc[normalized_df['ray_num'] == ray_degree, 'value'] = (normalized_df['value'] - minvalue)\
+            normalized_df.loc[normalized_df['ray_num'] == ray_degree, 'value'] = (normalized_df['value'] - minvalue) \
                                                                                  + delta * multiplier
             df_by_metric = normalized_df[normalized_df['ray_num'] == ray_degree]
             traces.append(go.Scatter(
@@ -314,7 +321,8 @@ def run(dir_path):
                 y=df_by_metric['value'],
                 x0=0,
                 y0=0,
-                mode='lines',
+                mode='lines+text',
+                text=[i],
                 opacity=0.7,
                 marker={
                     'size': 15,
@@ -327,9 +335,15 @@ def run(dir_path):
             'data': traces,
             'layout': go.Layout(
                 xaxis={'range': [x_[0], x_[-1]]},
-                yaxis={'range': [0, 2500]},
+                yaxis={'range': [0, 2500], 'autorange': True},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                legend={'x': 0, 'y': 1},
+                legend=dict(
+                    xanchor="right",
+                    yanchor="top",
+                    orientation="h",
+                    x=1,
+                    y=1.3
+                ),
                 hovermode='closest'
             )
         }
@@ -360,7 +374,8 @@ def run(dir_path):
                 y=df_by_metric['value'],
                 x0=0,
                 y0=0,
-                mode='lines',
+                mode='lines+text',
+                text=[runtime['metrics_obj'].header['metrics'][i]],
                 opacity=0.7,
                 marker={
                     'size': 15,
@@ -374,9 +389,15 @@ def run(dir_path):
             'data': traces,
             'layout': go.Layout(
                 xaxis={'range': [x_[0], x_[-1]]},
-                yaxis={'range': [0, 9500]},
+                yaxis={'range': [0, 2500], 'autorange': True},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                legend={'x': 0, 'y': 1},
+                legend=dict(
+                    orientation="h",
+                    xanchor="right",
+                    yanchor="bottom",
+                    x=1,
+                    y=1.02
+                ),
                 hovermode='closest'
             )
         }
