@@ -99,6 +99,12 @@ def run(dir_path):
         update_file(0)
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+    delta_slider = dcc.Slider(
+        id='delta-slider',
+        min=5,
+        max=500,
+        value=10
+    )
 
     app.layout = html.Div([
         html.H1('PRAO Data Viewer'),
@@ -123,6 +129,19 @@ def run(dir_path):
         make_slider('metric', 1),
         html.Br(),
         make_centered_p('metric'),
+
+        html.H2('Rays by Band & Metric Beta'),
+        dcc.Graph(id='graph-band-metric-beta'),
+        html.Br(),
+        make_slider('band', 4),
+        html.Br(),
+        make_centered_p('band'),
+        make_slider('metric', 4),
+        html.Br(),
+        make_centered_p('metric'),
+        html.Br(),
+        delta_slider,
+        make_centered_p('delta'),
 
         html.H2('Bands by Ray & Metric'),
         dcc.Graph(id='graph-ray-metric'),
@@ -195,6 +214,72 @@ def run(dir_path):
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
                 legend={'x': 0, 'y': 1},
                 hovermode='closest'
+            )
+        }
+
+    @app.callback(
+        dash.dependencies.Output('graph-band-metric-beta', 'figure'),
+        [dash.dependencies.Input('band-slider-4', 'value'),
+         dash.dependencies.Input('metric-slider-4', 'value'),
+         dash.dependencies.Input('file-changer', 'value'),
+         dash.dependencies.Input('delta-slider', 'value')
+         ])
+    def update_figure_4(selected_band, selected_metric, selected_file, delta):
+        logger.debug('enter update_figure_4(%s, %s, %s)', selected_band, selected_metric, selected_file)
+        if int(selected_file) != runtime['file']:
+            with runtime_lock:
+                update_file(selected_file)
+
+        df = runtime['metrics_obj'].df
+        filtered_df = df[(df['band_num'] == selected_band) & (df['metric_num'] == selected_metric)]
+        logging.debug("filtered df is %s\n", filtered_df.head(10))
+        traces = []
+        x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(
+            runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
+                'fileDuration_in_star_seconds']), int(runtime['metrics_obj'].header['zipped_point_tresolution'])))
+        x_ = [seconds_to_time(i) for i in x_]
+        if runtime['metrics_obj'].header['isnorth']:
+            filtered_df['ray_num'] = filtered_df['ray_num'].apply(lambda ray: rays_gradient_north[str(ray)])
+        elif not runtime['metrics_obj'].header['isnorth']:
+            filtered_df['ray_num'] = filtered_df['ray_num'].apply(lambda ray: rays_gradient_south[str(ray)])
+        logging.debug("filtered df is %s", filtered_df)
+        normalized_df = filtered_df.copy()
+        multiplier = 0
+        logging.debug("unique rays are %s", normalized_df.ray_num.unique())
+
+        for ray_degree in normalized_df.ray_num.unique():
+            minvalue = normalized_df[normalized_df['ray_num'] == ray_degree]['value'].min()
+            normalized_df.loc[normalized_df['ray_num'] == ray_degree, 'value'] = (normalized_df['value'] - minvalue)\
+                                                                                 + delta * multiplier
+            df_by_metric = normalized_df[normalized_df['ray_num'] == ray_degree]
+            traces.append(go.Scatter(
+                x=x_,
+                y=df_by_metric['value'],
+                x0=0,
+                y0=0,
+                mode='lines+text',
+                text=[ray_degree],
+                opacity=0.7,
+                marker={
+                    'size': 10,
+                    'line': {'width': 0.5, 'color': 'black'}
+                },
+                name=str(ray_degree),
+            ))
+            multiplier += 1
+
+        logging.debug('leave update_figure_4(%s, %s, %s)', selected_band, selected_metric, selected_file)
+        return {
+            'data': traces,
+            'layout': go.Layout(
+                xaxis={'range': [x_[0], x_[-1]]},
+                yaxis={'range': [0, 2500], 'visible': False, 'autorange': True},
+                margin={'l': 10, 'b': 40, 't': 10, 'r': 10},
+                legend={'x': 0, 'y': 0},
+                hovermode='closest',
+                height=800,
+                width=1200,
+                showlegend=False
             )
         }
 
@@ -289,7 +374,7 @@ def run(dir_path):
             'data': traces,
             'layout': go.Layout(
                 xaxis={'range': [x_[0], x_[-1]]},
-                yaxis={'range': [0, 2500]},
+                yaxis={'range': [0, 9500]},
                 margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
                 legend={'x': 0, 'y': 1},
                 hovermode='closest'
