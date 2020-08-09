@@ -51,6 +51,24 @@ def make_slider(param_name, slider_id):
     )
 
 
+def make_dropdown(param_name, dropdown_id):
+    idx = '{}_num'.format(param_name)
+    logging.info('idx = %s' % idx)
+    marks = []
+    if param_name == "ray":
+        if runtime['metrics_obj'].header['isnorth']:
+            for index, ray in rays_gradient_north.items():
+                marks.append({'label': ray, 'value': index})
+        else:
+            for index, ray in rays_gradient_south.items():
+                marks.append({'label': ray, 'value': index})
+    return dcc.Dropdown(
+        id='{}-dropdown-{}'.format(param_name, dropdown_id),
+        options=marks,
+        value=marks[0]['value']
+    )
+
+
 def make_centered_p(text):
     return html.P(text, style={'text-align': 'center', 'font-style': 'bold'})
 
@@ -146,22 +164,24 @@ def run(dir_path):
         html.H2('Bands by Ray & Metric'),
         dcc.Graph(id='graph-ray-metric'),
         html.Br(),
-        make_slider('ray', 2),
-        html.Br(),
-        make_centered_p('ray'),
         make_slider('metric', 2),
         html.Br(),
         make_centered_p('metric'),
+        html.Br(),
+        make_dropdown('ray', 2),
+        make_centered_p('ray'),
+        html.Br(),
 
         html.H2('Metrics by Band & Ray'),
         dcc.Graph(id='graph-band-ray'),
         html.Br(),
+
         make_slider('band', 3),
         html.Br(),
         make_centered_p('band'),
-        make_slider('ray', 3),
-        html.Br(),
+        make_dropdown('ray', 3),
         make_centered_p('ray'),
+        html.Br()
 
     ], style={'margin-left': '50px', 'margin-right': '50px'})
 
@@ -292,7 +312,7 @@ def run(dir_path):
 
     @app.callback(
         dash.dependencies.Output('graph-ray-metric', 'figure'),
-        [dash.dependencies.Input('ray-slider-2', 'value'),
+        [dash.dependencies.Input('ray-dropdown-2', 'value'),
          dash.dependencies.Input('metric-slider-2', 'value'),
          dash.dependencies.Input('file-changer', 'value'),
          ])
@@ -303,7 +323,7 @@ def run(dir_path):
                 update_file(selected_file)
 
         df = runtime['metrics_obj'].df
-        filtered_df = df[(df['ray_num'] == selected_ray) & (df['metric_num'] == selected_metric)]
+        filtered_df = df[(df['ray_num'] == int(selected_ray)) & (df['metric_num'] == selected_metric)]
         traces = []
         x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(
             runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
@@ -351,7 +371,7 @@ def run(dir_path):
     @app.callback(
         dash.dependencies.Output('graph-band-ray', 'figure'),
         [dash.dependencies.Input('band-slider-3', 'value'),
-         dash.dependencies.Input('ray-slider-3', 'value'),
+         dash.dependencies.Input('ray-dropdown-3', 'value'),
          dash.dependencies.Input('file-changer', 'value'),
          ])
     def update_figure_3(selected_band, selected_ray, selected_file):
@@ -361,7 +381,7 @@ def run(dir_path):
                 update_file(selected_file)
 
         df = runtime['metrics_obj'].df
-        filtered_df = df[(df['ray_num'] == selected_ray) & (df['band_num'] == selected_band)]
+        filtered_df = df[(df['ray_num'] == int(selected_ray)) & (df['band_num'] == selected_band)]
         traces = []
         x_ = list(range(int(runtime['metrics_obj'].header['star_start']), int(
             runtime['metrics_obj'].header['star_start'] + runtime['metrics_obj'].header[
